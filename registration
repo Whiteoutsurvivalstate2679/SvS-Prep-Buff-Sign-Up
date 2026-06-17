@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SvS Prep Buff Sign-Up</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ws-bg-deep: #0a1628;
+    --ws-bg-panel: #101f38;
+    --ws-bg-panel-2: #142844;
+    --ws-bg-input: #0d1d33;
+    --ws-ice: #bfe3ff;
+    --ws-ice-dim: #6f93b8;
+    --ws-ice-faint: #4a6585;
+    --ws-gold: #e8b86d;
+    --ws-gold-dim: #a9863f;
+    --ws-frost-border: rgba(191, 227, 255, 0.16);
+    --ws-frost-border-strong: rgba(191, 227, 255, 0.32);
+    --ws-success: #6fcf97;
+    --ws-success-bg: rgba(111, 207, 151, 0.12);
+    --ws-danger: #e2746b;
+    --ws-danger-bg: rgba(226, 116, 107, 0.12);
+    --border-radius-md: 6px;
+    --border-radius-lg: 10px;
+    --font-display: 'Cinzel', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { position: relative; }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--ws-bg-deep);
+    background-image:
+      radial-gradient(ellipse 600px 300px at 50% 0%, rgba(111, 147, 184, 0.15), transparent),
+      radial-gradient(circle at 15% 20%, rgba(191,227,255,0.04) 0%, transparent 1px),
+      radial-gradient(circle at 85% 60%, rgba(191,227,255,0.03) 0%, transparent 1px);
+    color: var(--ws-ice);
+    padding: 2rem 1rem;
+    overflow-x: hidden;
+  }
+  #snow { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  .wrap { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+  .eyebrow {
+    text-align: center; font-size: 11px; letter-spacing: 3px; color: var(--ws-gold-dim);
+    text-transform: uppercase; margin: 0 0 6px; font-weight: 600;
+  }
+  .game-name { text-align: center; font-size: 11px; color: var(--ws-ice-faint); letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 14px; }
+  .state-badge {
+    background: var(--ws-bg-panel-2); border: 0.5px solid var(--ws-gold-dim);
+    color: var(--ws-gold); font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    padding: 3px 12px; border-radius: 999px; margin: 0 auto 14px; display: table;
+  }
+  h1 {
+    font-family: var(--font-display); font-size: 26px; font-weight: 600; margin: 0 0 6px;
+    text-align: center; letter-spacing: 1px; color: var(--ws-ice);
+    text-shadow: 0 0 20px rgba(191,227,255,0.25);
+  }
+  .subtitle { font-size: 13px; color: var(--ws-ice-dim); text-align: center; margin: 0 0 1rem; letter-spacing: 0.3px; }
+  .disclaimer {
+    font-size: 11.5px; color: var(--ws-ice-faint); text-align: center; margin: 0 0 1.75rem;
+    letter-spacing: 0.2px; line-height: 1.5; max-width: 480px; margin-left: auto; margin-right: auto;
+  }
+  .card {
+    background: var(--ws-bg-panel);
+    border: 0.5px solid var(--ws-frost-border);
+    border-radius: var(--border-radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 12px; right: 12px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ws-frost-border-strong), transparent);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+  .day-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 1.25rem; padding-bottom: 2px; }
+  .day-tab {
+    flex: 1; min-width: 80px; padding: 10px 8px; border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--ws-frost-border); background: var(--ws-bg-panel);
+    text-align: center; cursor: pointer; font-size: 13px; transition: all 0.15s;
+  }
+  .day-tab .d { font-weight: 600; display: block; color: var(--ws-ice); letter-spacing: 0.3px; }
+  .day-tab .b { font-size: 10px; color: var(--ws-ice-faint); display: block; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .day-tab .a { font-size: 10px; color: var(--ws-success); display: block; margin-top: 2px; font-weight: 600; letter-spacing: 0.3px; }
+  .day-tab.active { background: var(--ws-bg-panel-2); border-color: var(--ws-gold-dim); box-shadow: 0 0 0 1px rgba(232,184,109,0.15) inset; }
+  .day-tab.active .d { color: var(--ws-gold); }
+  .day-tab.active .b { color: var(--ws-gold-dim); }
+  .day-tab.nobuff { opacity: 0.45; }
+  .day-tab.booked { border-color: rgba(111,207,151,0.4); }
+  .day-tab.booked .d { color: var(--ws-success); }
+  .field { margin-bottom: 1.1rem; }
+  .field label {
+    font-size: 11px; color: var(--ws-ice-dim); display: block; margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+  }
+  select, input {
+    width: 100%; height: 38px; border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--ws-frost-border); background: var(--ws-bg-input);
+    color: var(--ws-ice); padding: 0 12px; font-size: 14px; font-family: inherit;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--ws-gold-dim); }
+  input::placeholder { color: var(--ws-ice-faint); }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px;
+    grid-auto-rows: 56px;
+  }
+  .slot {
+    border: 0.5px solid var(--ws-frost-border); border-radius: var(--border-radius-md);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    background: var(--ws-bg-input); transition: all 0.15s; color: var(--ws-ice-dim);
+    height: 100%; width: 100%; text-align: center; padding: 4px;
+  }
+  .slot:hover:not(.taken):not(.mine):not(.selected) { border-color: var(--ws-gold-dim); color: var(--ws-ice); transform: translateY(-1px); }
+  .slot.taken { background: var(--ws-danger-bg); color: var(--ws-danger); border-color: rgba(226,116,107,0.3); cursor: not-allowed; }
+  .slot.mine { background: var(--ws-success-bg); color: var(--ws-success); border-color: rgba(111,207,151,0.4); }
+  .slot.mine.selected { box-shadow: 0 0 0 2px var(--ws-gold) inset; }
+  .slot.selected { background: var(--ws-bg-panel-2); color: var(--ws-gold); border-color: var(--ws-gold); box-shadow: 0 0 0 1px rgba(232,184,109,0.25) inset; }
+  .legend { display: flex; gap: 14px; margin-top: 1rem; font-size: 11px; color: var(--ws-ice-faint); flex-wrap: wrap; letter-spacing: 0.3px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .dot.free { background: var(--ws-bg-input); border: 0.5px solid var(--ws-frost-border); }
+  .dot.taken { background: var(--ws-danger); }
+  .dot.mine { background: var(--ws-success); }
+  .dot.selected { background: var(--ws-gold); }
+  .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--ws-ice-faint); font-size: 13px; letter-spacing: 0.3px; }
+  .status { font-size: 12px; text-align: center; margin-top: 10px; min-height: 18px; letter-spacing: 0.3px; }
+  .status.ok { color: var(--ws-success); }
+  .status.err { color: var(--ws-danger); }
+  .loading { text-align: center; padding: 2rem; color: var(--ws-ice-faint); font-size: 13px; }
+  .confirm-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: 1rem; padding-top: 1rem; border-top: 0.5px solid var(--ws-frost-border);
+  }
+  .selected-info { font-size: 12.5px; color: var(--ws-ice-dim); letter-spacing: 0.2px; }
+  .selected-info b { color: var(--ws-gold); }
+  button.confirm-btn {
+    background: linear-gradient(180deg, var(--ws-gold), var(--ws-gold-dim));
+    color: #1a1206; border: none; font-weight: 600; font-size: 13px;
+    padding: 10px 20px; border-radius: var(--border-radius-md); cursor: pointer;
+    letter-spacing: 0.3px; white-space: nowrap; transition: filter 0.15s;
+  }
+  button.confirm-btn:hover { filter: brightness(1.08); }
+  button.confirm-btn.cancel-mode {
+    background: transparent; border: 0.5px solid var(--ws-danger); color: var(--ws-danger);
+  }
+  button.confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .other-field { display: none; margin-top: 0.6rem; }
+  .other-field.visible { display: block; }
+  .footnote { text-align: center; font-size: 11px; color: var(--ws-ice-faint); margin-top: 1.5rem; letter-spacing: 0.3px; line-height: 1.6; }
+  .credit { text-align: center; font-size: 9px; color: var(--ws-ice-faint); opacity: 0.55; margin-top: 0.6rem; letter-spacing: 0.2px; line-height: 1.5; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ws-bg-panel-2); border: 0.5px solid var(--ws-gold-dim); color: var(--ws-gold);
+    padding: 12px 22px; border-radius: var(--border-radius-md); font-size: 13px; font-weight: 500;
+    opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 10; letter-spacing: 0.3px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<canvas id="snow"></canvas>
+<div class="wrap">
+  <p class="game-name">Whiteout Survival</p>
+  <p class="state-badge">State 2679</p>
+  <h1>SvS Prep Buff Sign-Up</h1>
+  <p class="subtitle">Please select only one slot for each day you participate.</p>
+  <p class="disclaimer">The scheduled times are provided for guidance only and may be modified until their final confirmation due to potential errors or unforeseen circumstances. Thank you for your understanding.</p>
+
+  <div class="card">
+    <div class="field">
+      <label>Alliance</label>
+      <select id="alliance">
+        <option value="CAT">CAT</option>
+        <option value="SUN">SUN</option>
+        <option value="ANG">ANG</option>
+        <option value="EMP">EMP</option>
+        <option value="OTHER">Other</option>
+      </select>
+      <div class="other-field" id="otherField">
+        <input type="text" id="otherAlliance" placeholder="Enter your alliance name">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field" style="position: relative;">
+        <label>Pseudo</label>
+        <input type="text" id="pseudo" placeholder="e.g. RealMo" maxlength="30" autocomplete="off">
+        <div id="pseudoSuggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:5; background: var(--ws-bg-panel-2); border: 0.5px solid var(--ws-frost-border-strong); border-radius: var(--border-radius-md); max-height: 180px; overflow-y: auto; margin-top: 4px;"></div>
+      </div>
+      <div class="field">
+        <label>ID</label>
+        <input type="text" id="playerId" placeholder="e.g. 416083125" maxlength="20" inputmode="numeric">
+      </div>
+    </div>
+  </div>
+
+  <div class="day-tabs" id="dayTabs"></div>
+
+  <div class="card">
+    <div id="slotsContainer" class="loading">Loading slots...</div>
+    <div class="legend">
+      <span><span class="dot free"></span> Open</span>
+      <span><span class="dot selected"></span> Selected</span>
+      <span><span class="dot mine"></span> Your slot</span>
+      <span><span class="dot taken"></span> Taken</span>
+    </div>
+    <div class="confirm-bar" id="confirmBar" style="display:none;">
+      <div class="selected-info" id="selectedInfo"></div>
+      <button class="confirm-btn" id="confirmBtn">Confirm my sign-up</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <p class="footnote">Week runs Sunday through Friday. No buff scheduled on Wednesday and Friday. Each slot covers the time until the next one starts.</p>
+  <p class="credit">Unofficial community schedule created by Gaelle. Provided for informational purposes only, with no affiliation to or endorsement from the developers of Whiteout Survival.</p>
+  <p class="credit" style="margin-top: 10px;"><a href="#" id="adminLink" style="color: var(--ws-ice-faint); text-decoration: underline; cursor: pointer;">Admin</a></p>
+</div>
+
+<div id="adminOverlay" style="display:none; position: fixed; inset: 0; background: rgba(5,10,20,0.85); z-index: 50; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: var(--ws-bg-panel); border: 0.5px solid var(--ws-frost-border); border-radius: var(--border-radius-lg); padding: 1.5rem; max-width: 600px; width: 100%; max-height: 85vh; overflow-y: auto;">
+    <div id="adminLoginView">
+      <p style="font-size: 13px; color: var(--ws-ice-dim); margin: 0 0 10px;">Enter admin password</p>
+      <input type="password" id="adminPassword" style="margin-bottom: 10px;">
+      <div style="display:flex; gap: 8px;">
+        <button class="confirm-btn" id="adminLoginBtn" style="flex:1;">Unlock</button>
+        <button class="confirm-btn cancel-mode" id="adminCloseBtn1" style="flex:1;">Close</button>
+      </div>
+      <p class="status err" id="adminLoginError" style="margin-top: 10px;"></p>
+    </div>
+    <div id="adminListView" style="display:none;">
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <p style="font-family: var(--font-display); font-size: 18px; color: var(--ws-gold); margin: 0;">Manage Sign-Ups</p>
+        <button class="confirm-btn cancel-mode" id="adminCloseBtn2" style="padding: 6px 14px;">Close</button>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 11px; color: var(--ws-ice-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display:block; margin-bottom: 6px;">Day</label>
+        <select id="adminDaySelect"></select>
+      </div>
+
+      <div id="adminListContent" style="margin-bottom: 16px;"></div>
+
+      <div style="border-top: 0.5px solid var(--ws-frost-border); padding-top: 14px;">
+        <p style="font-size: 12px; color: var(--ws-ice-dim); margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Add a sign-up manually</p>
+        <div class="row2" style="margin-bottom: 0.6rem;">
+          <select id="adminAddSlot"></select>
+          <input type="text" id="adminAddPseudo" placeholder="Pseudo">
+        </div>
+        <div class="row2" style="margin-bottom: 0.8rem;">
+          <input type="text" id="adminAddId" placeholder="ID">
+          <select id="adminAddAlliance">
+            <option value="CAT">CAT</option>
+            <option value="SUN">SUN</option>
+            <option value="ANG">ANG</option>
+            <option value="EMP">EMP</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <button class="confirm-btn" id="adminAddBtn" style="width: 100%;">Add sign-up</button>
+        <p class="status" id="adminAddStatus"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* Snowfall background */
+const canvas = document.getElementById('snow');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+const flakes = Array.from({length: 70}, () => ({
+  x: Math.random() * window.innerWidth,
+  y: Math.random() * window.innerHeight,
+  r: Math.random() * 2.2 + 0.6,
+  speed: Math.random() * 0.6 + 0.2,
+  drift: Math.random() * 0.4 - 0.2,
+  alpha: Math.random() * 0.5 + 0.25,
+}));
+function drawSnow() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const f of flakes) {
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(191, 227, 255, ${f.alpha})`;
+    ctx.fill();
+    f.y += f.speed;
+    f.x += f.drift;
+    if (f.y > window.innerHeight) { f.y = -4; f.x = Math.random() * window.innerWidth; }
+    if (f.x > window.innerWidth) f.x = 0;
+    if (f.x < 0) f.x = window.innerWidth;
+  }
+  requestAnimationFrame(drawSnow);
+}
+drawSnow();
+
+/* Schedule logic */
+const PLAYER_DB = {
+  CAT: [
+    ["Neo","418346341"],["Eva","415679258"],["Jack&Jill","419017751"],["Mick","417022843"],
+    ["Rage","415928984"],["Fizz","417681579"],["Free Willy","416715195"],["IceQueen","442403171"],
+    ["Kane","415544759"],["MamaDuck","409003107"],["Aniquosama","417190321"],["MoEssam","416118367"],
+    ["YMKUL","411815322"],["NotSuss","418330561"],
+    ["La Shanks","404941473"],["William","399751067"],["Ikane","445134245"],["Sentinel","411045047"],
+    ["Ghazi","419352813"],["Agent Smith","419214586"],["PandaExpress","417052674"],["Gm kk","419083180"],
+    ["Sushi","373434364"],["Omega","415758281"],["PicoleZro","421872493"],["The wizard","400934907"],
+    ["Styoctark","417117955"],["Emregazi","342444893"],["Atabey","341740610"],["Olga","418366032"],
+    ["Jiak","415928668"],["LeyNC","338261594"],["Yaman!","339971549"],["Clam","415371601"],
+    ["Reaper","412173227"],["Respecca","415986622"],["Tengentoppa","421319573"],["Tinippa","431325476"],
+    ["Phokas","406704769"],["Florian Wielki","418919935"],["Chiwawa","406300473"],["Basque6440","418330259"],
+    ["Ripriri","415846874"],["MasterSnow","417674595"],["V","382016984"],["Anekc","416052522"],
+    ["Anna","415659493"],["MrsBee","403460997"],["Poseidon","415502611"],["Mycity","417854541"],
+    ["Nephilim","416412761"],["Pavel1","417150506"],["Mithras","419100014"],["Sashimi","406909702"],
+    ["Cesur","418165927"],["WookieLuk","416593278"],["Krillton","416593278"],["Taz","417871274"],
+    ["Butternut","416790119"],["El gato Sin bota","418101236"],["Baki","418280590"],["IzziDude","418635474"],
+    ["Uhuyy","417150729"],["Dexter","415463085"],["Ice Spice","415659732"],["Cutthroatchicken","418549809"],
+    ["Quinny","416249294"],["Wafflesnouser","416462755"],["Joha","418756163"],["Energy","419395249"],
+    ["Spooner","417707593"],["Liverpool Fan","416364492"],["Cheeks","418498410"],["Sukuna","492649960"],
+    ["V4lly","416347130"],["Vonknez","416904815"],
+    ["Powerhouse","426812712"],["Blackbear","418524396"],["Amarah","419038490"],["Mika","451763642"],
+    ["Cloud Haribo","415732235"],["Alpha Queen7","415315945"],["StarFire","403184583"],["Marios","415872638"],
+    ["Ironman","416183987"],["Kombucha","463930849"],["M2k","454330803"],
+    ["Power","413254995"],["Tek","427570015"],["Kara Serhat","415725171"],["Kepsoooo","427383800"],
+    ["Minimax","751430655"],["JrYaman!","770298630"],["Lilmoisty","729156251"]
+  ],
+  SUN: [
+    ["Masha","419263961"],
+    ["Nova","417658106"],["Lord Duckylex","416012761"],["Sgt24","415724508"],["Reira","417887609"],
+    ["Turk","417412700"],["TERA","417543942"],["R4BBIT","417675093"],["Banana Peel","587244011"],
+    ["KaapoKakko","422228133"],["SUNLordSLY","415738607"],["RazzMaTazz","420439977"],["VENOM","383665810"],
+    ["Joseph Frost","416216879"],["Wizhaa","325442589"],["LRN","368442589"],["Nami Gila","367705350"],
+    ["Bebe","376338118"],["Bbspring","373340150"],["Akbaba","374520052"],["Aliana","378482860"],
+    ["Gazi27","382638102"],["Ram52","393309405"],["Snowgirl","395107235"],["Khaled","396860628"],
+    ["S3d","397320415"],["Dudu","397387233"],["Freya","401695315"],["Catwoman","401996801"],
+    ["Can che ha bias","414155049"],["True Chaos","418873801"],["Hawk032783","418206223"],["Brusco","418730531"],
+    ["Lauren","418435755"],["Suzuki Trooper","418652429"],["Sparky","416588547"],["Steinhard","419280000"],
+    ["Bakinskiy","418821353"],["Hef","416265575"],["Timoninon","418542973"],["Ejnk","417265066"],
+    ["Tito","416232982"],["Kys","418215359"],["Titou","416232982"],["Mj4424","417462058"],
+    ["Chrissy","418363198"],["Mysteorix","418510669"],["Super Pabsab","415430481"],["RoadWarrior","422810105"],
+    ["Tron","422335047"],["Misfit Moliy","423498308"],["Rune","419615387"],["Tav","422531806"],
+    ["BlueLotus","420156197"],["Waffles","420893549"],["Nasser","420762544"],["Smass","440783805"],
+    ["Davemecanish","423466066"],["Dud","422794545"],["Mewa","420763044"],["Burdziok","420392596"],
+    ["MrPickles","419950289"],["Barry McCockiner","420425800"],["MintG","427232130"],["Pupple","428003928"],
+    ["Smass2","440783805"],["GoblinSlayer","458524038"],
+    ["AI","400369022"],["SilentMind","404491475"],["Azod","416036028"],["MrKrabs","415921399"],
+    ["Child of Sun","415348043"],["Katha","418461015"],["HaiCode","419214902"],["Dory Pumba","415643226"],
+    ["LordeeM","415610456"],["Mar_Kiedis","415708958"],["MaoMao","419566361"],["LoftheCoolKidz","419664767"],
+    ["Trixsmia","422728771"],["Zyzuly","420025530"],["KJack007","420802056"],["GirthQuake","428502590"],
+    ["Mustache","416911328"],["Sir Robert San","419329577"],["Reya","417003346"],["RooNick","420565761"],
+    ["Axoullias","421925823"],["Lord_Thunda","423302556"],["Elli","420572430"],["Dreadzo","425300414"],
+    ["Jojo","443166335"],["Tereira","647436475"]
+  ],
+  ANG: [
+    ["Anastasia","415643310"],
+    ["Kath","416118445"],["ShartOfYourWorld","417245932"],["Mimmii","418097998"],["Hero","416033656"],
+    ["Mardko007","418097998"],["Nah Hell Nah","416740728"],["Formed","416033656"],["Nlizz Quackers","417855381"],
+    ["Lizzy Quackers","417855381"],["Management","419166169"],["Maverquack","417200511"],["Structo","415972084"],
+    ["Queen Romie","368722004"],["Demirkan","321304109"],["Emir","319584121"],["One puch mickey","321419553"],
+    ["Darkn4zz","333046657"],["Daddy Chief","349514738"],["Attacker","368603671"],["Angeliqueu","369274407"],
+    ["Isagi","380197061"],["685","377648345"],["SAM","387740245"],["Nabicaz be kamil","402594425"],
+    ["Myst1c","414188286"],["WiseDevil","414188286"],["Frosty","413679498"],["Charlie","418467548"],
+    ["Khaled 05","416321830"],["ZeynQuack","415620249"],["ThunderGreen","415390999"],["LambLovesYou","417016720"],
+    ["Arasaki","418114502"],["Jonny D","418131128"],["AZO8","415870143"],["KingHorneyToad","415345901"],
+    ["404","417181020"],["The Honorato","419147192"],["Nica","418704878"],["Tweety","416461052"],
+    ["Yodha","415609269"],["Momo","418509772"],["Apocalypse","418641069"],["Contrails","418034888"],
+    ["Buck1","419394770"],["Sonic_z34","415331579"],["Izzy","415905121"],["Call of Diddy","417035695"],
+    ["Tenguf","416675257"],["ALF","416036286"],["Hannah","416822753"],["Pippo","416020026"],
+    ["Joes","417265291"],["Koba","418346658"],["PDF3057","416790210"],["Milotzki","416986841"],
+    ["HexagonsPenguin","418019110"],["Flipper","416987025"],["Alinam","416987029"],["Top Chief","418084770"],
+    ["Battle Kitty","416741288"],["Frankie","419215279"],["O Ash O","416888752"],["Alex0328","415332287"],
+    ["Sehmus","418904002"],["Miss Piggy","418626195"],["Lilith","420853430"],["sunyv","425422886"],
+    ["Gabe","431502293"],["MadamMac","436320934"],
+    ["SweetPerdition","374696942"],["Lazy mini robot","386527914"],["Zialee","404757522"],["OhayouZee","416229601"],
+    ["SGT Cuervo","417409787"],["Bloody hound","417904110"],["Soul","419280571"],["Ashiguru","417396445"],
+    ["Spurs man","417134337"],["Lais","416741225"],["Saito","419035077"],["Jonzey","428562336"],
+    ["Kiki","440358488"],["Red moon","451816702"],
+    ["Lion","416281699"],["Sehmus!!!","444358032"],["MardkoShallburn","475907588"],["BabyxXchibix","772336014"]
+  ],
+  EMP: []
+};
+
+const FULL_SLOTS = [
+  "00:15","00:45","01:15","01:45","02:15","02:45","03:15","03:45","04:15","04:45",
+  "05:15","05:45","06:15","06:45","07:15","07:45","08:15","08:45","09:15","09:45",
+  "10:15","10:45","11:15","11:45","12:15","12:45","13:15","13:45","14:15","14:45",
+  "15:15","15:45","16:15","16:45","17:15","17:45","18:15","18:45","19:15","19:45",
+  "20:15","20:45","21:15","21:45","22:15","22:45","23:15","23:45"
+];
+
+const DAYS = [
+  { key: 'sun', label: 'Sunday', buff: 'Construction', nobuff: false, slots: ["23:45"] },
+  { key: 'mon', label: 'Monday', buff: 'Construction', nobuff: false, slots: FULL_SLOTS },
+  { key: 'tue', label: 'Tuesday', buff: 'Research', nobuff: false, slots: FULL_SLOTS },
+  { key: 'wed', label: 'Wednesday', buff: 'No buff', nobuff: false, slots: ["23:45"] },
+  { key: 'thu', label: 'Thursday', buff: 'Troop Training', nobuff: false, slots: FULL_SLOTS },
+  { key: 'fri', label: 'Friday', buff: 'No buff', nobuff: true, slots: [] },
+];
+
+function nextSlotLabel(slots, i) {
+  return i < slots.length - 1 ? slots[i + 1] : (slots === FULL_SLOTS ? '00:15' : '00:15');
+}
+
+let currentDay = 'sun';
+let bookings = {};
+let dayBookingCache = {};
+let dayAvailabilityCache = {};
+let selectedSlot = null;
+
+function renderDayTabs() {
+  const el = document.getElementById('dayTabs');
+  el.innerHTML = DAYS.map(d => {
+    const availCount = dayAvailabilityCache[d.key];
+    const availLabel = (d.slots.length > 0 && availCount !== undefined)
+      ? `<span class="a">${availCount} open</span>` : '';
+    return `
+    <div class="day-tab ${d.key === currentDay ? 'active' : ''} ${d.nobuff && d.slots.length === 0 ? 'nobuff' : ''} ${dayBookingCache[d.key] ? 'booked' : ''}" data-day="${d.key}">
+      <span class="d">${d.label}</span>
+      <span class="b">${d.buff}</span>
+      ${availLabel}
+    </div>
+  `;
+  }).join('');
+  el.querySelectorAll('.day-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      currentDay = tab.dataset.day;
+      selectedSlot = null;
+      renderDayTabs();
+      renderSlots();
+    });
+  });
+}
+
+async function loadBookings(dayKey) {
+  try {
+    const result = await window.storage.get('svs-bookings:' + dayKey, true);
+    return result ? JSON.parse(result.value) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+async function saveBookings(dayKey, data) {
+  try {
+    await window.storage.set('svs-bookings:' + dayKey, JSON.stringify(data), true);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getMyId() {
+  if (!window._mySessionId) {
+    window._mySessionId = 'user-' + Math.random().toString(36).slice(2, 10);
+  }
+  return window._mySessionId;
+}
+
+async function refreshBookedTabs() {
+  const myId = getMyId();
+  for (const d of DAYS) {
+    if (d.slots.length === 0) continue;
+    const b = await loadBookings(d.key);
+    dayBookingCache[d.key] = Object.values(b).some(entry => entry.sessionId === myId);
+    dayAvailabilityCache[d.key] = d.slots.length - Object.keys(b).length;
+  }
+  renderDayTabs();
+}
+
+function updateConfirmBar() {
+  const bar = document.getElementById('confirmBar');
+  const info = document.getElementById('selectedInfo');
+  const btn = document.getElementById('confirmBtn');
+  if (!selectedSlot) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  info.innerHTML = `Selected: <b>${selectedSlot}</b>`;
+  const existing = bookings[selectedSlot];
+  const myId = getMyId();
+  if (existing && existing.sessionId === myId) {
+    btn.textContent = 'Cancel my sign-up';
+    btn.classList.add('cancel-mode');
+  } else {
+    btn.textContent = 'Confirm my sign-up';
+    btn.classList.remove('cancel-mode');
+  }
+}
+
+async function renderSlots() {
+  const container = document.getElementById('slotsContainer');
+  document.getElementById('confirmBar').style.display = 'none';
+  container.className = 'loading';
+  container.textContent = 'Loading slots...';
+
+  const day = DAYS.find(d => d.key === currentDay);
+  if (day.nobuff) {
+    container.className = 'empty-state';
+    container.textContent = 'No buff scheduled this day, no sign up needed.';
+    return;
+  }
+
+  bookings = await loadBookings(currentDay);
+  container.className = 'grid';
+  container.innerHTML = day.slots.map((slot) => {
+    const booking = bookings[slot];
+    const isMine = booking && booking.sessionId === getMyId();
+    const isSelected = slot === selectedSlot;
+    let cls = 'slot';
+    if (isMine) {
+      cls += isSelected ? ' mine selected' : ' mine';
+    } else if (booking) {
+      cls += ' taken';
+    } else if (isSelected) {
+      cls += ' selected';
+    }
+    return `<div class="${cls}" data-slot="${slot}">${slot}</div>`;
+  }).join('');
+
+  container.querySelectorAll('.slot').forEach(el => {
+    el.addEventListener('click', async () => {
+      const slot = el.dataset.slot;
+      const freshBookings = await loadBookings(currentDay);
+      const booking = freshBookings[slot];
+      const isMine = booking && booking.sessionId === getMyId();
+
+      if (booking && !isMine) {
+        // Slot was just taken by someone else, refresh the view to reflect reality
+        bookings = freshBookings;
+        renderSlots();
+        return;
+      }
+
+      if (isMine) {
+        selectedSlot = slot;
+        renderSlots();
+        return;
+      }
+
+      selectedSlot = (selectedSlot === slot) ? null : slot;
+      renderSlots();
+    });
+  });
+
+  updateConfirmBar();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+document.getElementById('alliance').addEventListener('change', (e) => {
+  document.getElementById('otherField').classList.toggle('visible', e.target.value === 'OTHER');
+  document.getElementById('pseudo').value = '';
+  document.getElementById('playerId').value = '';
+  hideSuggestions();
+});
+
+const pseudoInput = document.getElementById('pseudo');
+const suggestionsBox = document.getElementById('pseudoSuggestions');
+
+function hideSuggestions() {
+  suggestionsBox.style.display = 'none';
+  suggestionsBox.innerHTML = '';
+}
+
+pseudoInput.addEventListener('input', () => {
+  const allianceVal = document.getElementById('alliance').value;
+  const list = PLAYER_DB[allianceVal] || [];
+  const query = pseudoInput.value.trim().toLowerCase();
+  document.getElementById('playerId').value = '';
+
+  if (!query || list.length === 0) { hideSuggestions(); return; }
+
+  const matches = list.filter(([name]) => name.toLowerCase().includes(query)).slice(0, 8);
+  if (matches.length === 0) { hideSuggestions(); return; }
+
+  suggestionsBox.innerHTML = matches.map(([name, id]) => `
+    <div class="suggestion-item" data-name="${name}" data-id="${id}"
+      style="padding: 8px 12px; font-size: 13px; cursor: pointer; color: var(--ws-ice); border-bottom: 0.5px solid var(--ws-frost-border);">
+      ${name} <span style="color: var(--ws-ice-faint); font-size: 11px;">${id}</span>
+    </div>
+  `).join('');
+  suggestionsBox.style.display = 'block';
+
+  suggestionsBox.querySelectorAll('.suggestion-item').forEach(item => {
+    item.addEventListener('mouseenter', () => item.style.background = 'var(--ws-bg-input)');
+    item.addEventListener('mouseleave', () => item.style.background = 'transparent');
+    item.addEventListener('click', () => {
+      pseudoInput.value = item.dataset.name;
+      document.getElementById('playerId').value = item.dataset.id;
+      hideSuggestions();
+    });
+  });
+});
+
+document.addEventListener('click', (e) => {
+  if (!suggestionsBox.contains(e.target) && e.target !== pseudoInput) hideSuggestions();
+});
+
+document.getElementById('confirmBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('status');
+  const pseudo = document.getElementById('pseudo').value.trim();
+  const playerId = document.getElementById('playerId').value.trim();
+  const allianceSelect = document.getElementById('alliance').value;
+  const otherAlliance = document.getElementById('otherAlliance').value.trim();
+  const alliance = allianceSelect === 'OTHER' ? otherAlliance : allianceSelect;
+
+  if (!pseudo) { statusEl.className = 'status err'; statusEl.textContent = 'Please enter your pseudo.'; return; }
+  if (!playerId) { statusEl.className = 'status err'; statusEl.textContent = 'Please enter your ID.'; return; }
+  if (allianceSelect === 'OTHER' && !otherAlliance) {
+    statusEl.className = 'status err'; statusEl.textContent = 'Please specify your alliance name.'; return;
+  }
+  if (!selectedSlot) { statusEl.className = 'status err'; statusEl.textContent = 'Please select a slot first.'; return; }
+
+  bookings = await loadBookings(currentDay);
+  const existing = bookings[selectedSlot];
+  const myId = getMyId();
+
+  if (existing && existing.sessionId === myId) {
+    delete bookings[selectedSlot];
+    const ok = await saveBookings(currentDay, bookings);
+    if (ok) {
+      showToast('Your sign up has been cancelled.');
+      statusEl.textContent = '';
+    } else {
+      statusEl.className = 'status err'; statusEl.textContent = 'Something went wrong, please try again.';
+    }
+    selectedSlot = null;
+    renderSlots();
+    refreshBookedTabs();
+    return;
+  }
+
+  if (existing) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'This slot was just taken by someone else. Please pick another.';
+    selectedSlot = null;
+    renderSlots();
+    return;
+  }
+
+  const alreadyBookedSlot = Object.entries(bookings).find(([s, b]) => b.sessionId === myId);
+  if (alreadyBookedSlot) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'You already have a slot this day (' + alreadyBookedSlot[0] + '). Cancel it first to pick another one.';
+    return;
+  }
+
+  bookings[selectedSlot] = { pseudo, playerId, alliance, sessionId: myId, ts: Date.now() };
+  const ok = await saveBookings(currentDay, bookings);
+  if (ok) {
+    showToast(`Sign up confirmed for ${selectedSlot}. See you there, ${pseudo}!`);
+    statusEl.textContent = '';
+  } else {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Network error, please try again.';
+  }
+  selectedSlot = null;
+  renderSlots();
+  refreshBookedTabs();
+});
+
+renderDayTabs();
+renderSlots();
+refreshBookedTabs();
+
+/* Admin panel */
+const ADMIN_PASSWORD = 'icewatch2679';
+
+document.getElementById('adminLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('adminOverlay').style.display = 'flex';
+  document.getElementById('adminLoginView').style.display = 'block';
+  document.getElementById('adminListView').style.display = 'none';
+  document.getElementById('adminPassword').value = '';
+  document.getElementById('adminLoginError').textContent = '';
+});
+
+function closeAdmin() {
+  document.getElementById('adminOverlay').style.display = 'none';
+}
+document.getElementById('adminCloseBtn1').addEventListener('click', closeAdmin);
+document.getElementById('adminCloseBtn2').addEventListener('click', closeAdmin);
+
+document.getElementById('adminLoginBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('adminPassword').value;
+  if (pw !== ADMIN_PASSWORD) {
+    document.getElementById('adminLoginError').textContent = 'Incorrect password.';
+    return;
+  }
+  document.getElementById('adminLoginView').style.display = 'none';
+  document.getElementById('adminListView').style.display = 'block';
+  setupAdminDaySelect();
+  setupAdminSlotSelect();
+  await renderAdminList();
+});
+
+const ADMIN_VIEWS = [
+  { key: 'mon', label: 'Monday', buff: 'Construction', storageKeys: ['sun', 'mon'], slots: ['23:45', ...FULL_SLOTS] },
+  { key: 'tue', label: 'Tuesday', buff: 'Research', storageKeys: ['tue'], slots: FULL_SLOTS },
+  { key: 'thu', label: 'Thursday', buff: 'Troop Training', storageKeys: ['wed', 'thu'], slots: ['23:45', ...FULL_SLOTS] },
+];
+
+let adminCurrentView = ADMIN_VIEWS[0].key;
+
+function setupAdminDaySelect() {
+  const sel = document.getElementById('adminDaySelect');
+  sel.innerHTML = ADMIN_VIEWS.map(v =>
+    `<option value="${v.key}" ${v.key === adminCurrentView ? 'selected' : ''}>${v.label} (${v.buff})</option>`
+  ).join('');
+  sel.onchange = async () => {
+    adminCurrentView = sel.value;
+    setupAdminSlotSelect();
+    await renderAdminList();
+  };
+}
+
+function setupAdminSlotSelect() {
+  const view = ADMIN_VIEWS.find(v => v.key === adminCurrentView);
+  const sel = document.getElementById('adminAddSlot');
+  sel.innerHTML = view.slots.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+async function loadMergedBookings(view) {
+  const merged = {};
+  for (const storageKey of view.storageKeys) {
+    const b = await loadBookings(storageKey);
+    for (const [slot, entry] of Object.entries(b)) {
+      merged[slot] = { ...entry, _storageKey: storageKey };
+    }
+  }
+  return merged;
+}
+
+async function renderAdminList() {
+  const content = document.getElementById('adminListContent');
+  content.innerHTML = '<p style="color: var(--ws-ice-faint); font-size: 13px;">Loading...</p>';
+  const view = ADMIN_VIEWS.find(v => v.key === adminCurrentView);
+  const merged = await loadMergedBookings(view);
+  const entries = Object.entries(merged).sort((a, b2) => view.slots.indexOf(a[0]) - view.slots.indexOf(b2[0]));
+
+  let html = `<p style="text-align: center; font-family: var(--font-display); font-size: 16px; color: var(--ws-gold); margin: 0 0 12px; letter-spacing: 0.5px;">${view.label} — ${view.buff}</p>`;
+
+  if (entries.length === 0) {
+    html += `<p style="font-size: 12px; color: var(--ws-ice-faint); text-align: center;">No sign-ups yet for ${view.label}.</p>`;
+    content.innerHTML = html;
+    return;
+  }
+
+  html += `<div style="border: 0.5px solid var(--ws-frost-border); border-radius: var(--border-radius-md); overflow: hidden;">`;
+  entries.forEach(([slot, entry], i) => {
+    html += `<div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 12.5px; ${i % 2 === 0 ? 'background: var(--ws-bg-input);' : ''} color: var(--ws-ice);">
+      <span style="min-width: 50px; color: var(--ws-gold); font-weight: 600;">${slot}</span>
+      <span style="min-width: 90px; flex: 1;">${entry.pseudo}</span>
+      <span style="min-width: 90px; color: var(--ws-ice-dim);">${entry.playerId}</span>
+      <span style="min-width: 45px; color: var(--ws-ice-dim);">${entry.alliance}</span>
+      <button class="admin-delete-btn" data-slot="${slot}" data-storagekey="${entry._storageKey}" style="background:none; border:0.5px solid var(--ws-danger); color: var(--ws-danger); border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer;">Remove</button>
+    </div>`;
+  });
+  html += `</div>`;
+  content.innerHTML = html;
+
+  content.querySelectorAll('.admin-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const slot = btn.dataset.slot;
+      const storageKey = btn.dataset.storagekey;
+      const current = await loadBookings(storageKey);
+      delete current[slot];
+      await saveBookings(storageKey, current);
+      await renderAdminList();
+    });
+  });
+}
+
+document.getElementById('adminAddBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('adminAddStatus');
+  const slot = document.getElementById('adminAddSlot').value;
+  const pseudo = document.getElementById('adminAddPseudo').value.trim();
+  const playerId = document.getElementById('adminAddId').value.trim();
+  const alliance = document.getElementById('adminAddAlliance').value;
+
+  if (!pseudo || !playerId) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Please fill in pseudo and ID.';
+    return;
+  }
+
+  const view = ADMIN_VIEWS.find(v => v.key === adminCurrentView);
+  // 23:45 always belongs to the first (earlier) storage key, the rest belong to the main day
+  const storageKey = (slot === '23:45') ? view.storageKeys[0] : view.storageKeys[view.storageKeys.length - 1];
+
+  const current = await loadBookings(storageKey);
+  if (current[slot]) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'This slot is already taken. Remove it first if you want to replace it.';
+    return;
+  }
+
+  current[slot] = { pseudo, playerId, alliance, sessionId: 'admin-' + Math.random().toString(36).slice(2, 8), ts: Date.now() };
+  const ok = await saveBookings(storageKey, current);
+  if (ok) {
+    statusEl.className = 'status ok';
+    statusEl.textContent = `Added ${pseudo} to ${slot}.`;
+    document.getElementById('adminAddPseudo').value = '';
+    document.getElementById('adminAddId').value = '';
+    await renderAdminList();
+  } else {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Something went wrong, please try again.';
+  }
+});
+</script>
+</body>
+</html>
