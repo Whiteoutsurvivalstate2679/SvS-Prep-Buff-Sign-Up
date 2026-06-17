@@ -168,6 +168,42 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-width: 90%; text-align: center;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .help-text { font-size: 10.5px; color: var(--ws-ice-faint); margin: 5px 0 0; letter-spacing: 0.2px; line-height: 1.4; }
+  .curtain-status-badge {
+    display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 3px 10px; border-radius: 999px; margin-bottom: 10px; text-transform: uppercase;
+  }
+  .curtain-status-badge.on { background: var(--ws-danger-bg); color: var(--ws-danger); border: 0.5px solid rgba(226,116,107,0.3); }
+  .curtain-status-badge.off { background: var(--ws-success-bg); color: var(--ws-success); border: 0.5px solid rgba(111,207,151,0.4); }
+  .my-bookings-box {
+    background: var(--ws-bg-panel-2); border: 0.5px solid var(--ws-gold-dim); border-radius: var(--border-radius-md);
+    padding: 10px 14px; margin-bottom: 1rem; font-size: 12px; color: var(--ws-ice-dim); display: none;
+  }
+  .my-bookings-box.visible { display: block; }
+  .my-bookings-box .title { font-weight: 600; color: var(--ws-gold); margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
+  .my-bookings-box .item { display: inline-block; margin: 2px 6px 2px 0; }
+
+  /* ===== Mobile responsive (phones only, desktop layout stays unchanged) ===== */
+  @media (max-width: 480px) {
+    body { padding: 1.25rem 0.65rem; }
+    h1 { font-size: 21px; }
+    .card { padding: 1rem; }
+    .row2 { grid-template-columns: 1fr; gap: 0.7rem; }
+    .day-tabs { gap: 5px; }
+    .day-tab { min-width: 64px; padding: 8px 4px; }
+    .day-tab .d { font-size: 12px; }
+    .day-tab .b { font-size: 9px; }
+    .grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      grid-auto-rows: 50px;
+    }
+    .slot { font-size: 12px; }
+    .confirm-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+    .confirm-bar button.confirm-btn { width: 100%; }
+    .legend { font-size: 10px; gap: 10px; }
+    .day-summary { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
 </style>
 </head>
 <body>
@@ -198,6 +234,7 @@
         <label>Pseudo</label>
         <input type="text" id="pseudo" placeholder="e.g. RealMo" maxlength="30" autocomplete="off">
         <div id="pseudoSuggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:5; background: var(--ws-bg-panel-2); border: 0.5px solid var(--ws-frost-border-strong); border-radius: var(--border-radius-md); max-height: 180px; overflow-y: auto; margin-top: 4px;"></div>
+        <p class="help-text">Start typing, matching players will appear below.</p>
       </div>
       <div class="field">
         <label>ID</label>
@@ -205,6 +242,8 @@
       </div>
     </div>
   </div>
+
+  <div class="my-bookings-box" id="myBookingsBox"></div>
 
   <div class="day-tabs" id="dayTabs"></div>
 
@@ -225,11 +264,12 @@
   </div>
 
   <p class="footnote">Week runs Sunday through Friday. No buff scheduled on Wednesday and Friday. Each slot covers the time until the next one starts.</p>
-  <p class="credit">Unofficial community schedule created by Gaelle. Provided for informational purposes only, with no affiliation to or endorsement from the developers of Whiteout Survival.</p>
+  <p class="credit">Unofficial community schedule created by Goldee. Provided for informational purposes only, with no affiliation to or endorsement from the developers of Whiteout Survival.</p>
+  <p class="credit" style="margin-top: 6px;">© 2026 Goldee. All rights reserved.</p>
   <p class="credit" style="margin-top: 10px;"><a href="#" id="adminLink" style="color: var(--ws-ice-faint); text-decoration: underline; cursor: pointer;">Admin</a></p>
 </div>
 
-<div id="adminOverlay" style="display:none; position: fixed; inset: 0; background: rgba(5,10,20,0.85); z-index: 50; align-items: center; justify-content: center; padding: 1rem;">
+<div id="adminOverlay" style="display:none; position: fixed; inset: 0; background: rgba(5,10,20,0.85); z-index: 80; align-items: center; justify-content: center; padding: 1rem;">
   <div style="background: var(--ws-bg-panel); border: 0.5px solid var(--ws-frost-border); border-radius: var(--border-radius-lg); padding: 1.5rem; max-width: 600px; width: 100%; max-height: 85vh; overflow-y: auto;">
     <div id="adminLoginView">
       <p style="font-size: 13px; color: var(--ws-ice-dim); margin: 0 0 10px;">Enter admin password</p>
@@ -242,43 +282,70 @@
     </div>
     <div id="adminListView" style="display:none;">
       <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <p style="font-family: var(--font-display); font-size: 18px; color: var(--ws-gold); margin: 0;">Manage Sign-Ups</p>
+        <p style="font-family: var(--font-display); font-size: 18px; color: var(--ws-gold); margin: 0;">Admin Panel</p>
         <button class="confirm-btn cancel-mode" id="adminCloseBtn2" style="padding: 6px 14px;">Close</button>
       </div>
 
-      <div style="margin-bottom: 14px;">
-        <label style="font-size: 11px; color: var(--ws-ice-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display:block; margin-bottom: 6px;">Day</label>
-        <select id="adminDaySelect"></select>
+      <div style="display:flex; gap: 6px; margin-bottom: 18px; border-bottom: 0.5px solid var(--ws-frost-border); padding-bottom: 10px;">
+        <button class="admin-tab-btn active" data-tab="signups" style="flex:1; background: var(--ws-bg-panel-2); border: 0.5px solid var(--ws-gold-dim); color: var(--ws-gold); font-size: 12px; font-weight: 600; padding: 7px; border-radius: 6px; cursor: pointer;">Sign-Ups</button>
+        <button class="admin-tab-btn" data-tab="messages" style="flex:1; background: var(--ws-bg-input); border: 0.5px solid var(--ws-frost-border); color: var(--ws-ice-dim); font-size: 12px; font-weight: 600; padding: 7px; border-radius: 6px; cursor: pointer;">Messages</button>
+        <button class="admin-tab-btn" data-tab="settings" style="flex:1; background: var(--ws-bg-input); border: 0.5px solid var(--ws-frost-border); color: var(--ws-ice-dim); font-size: 12px; font-weight: 600; padding: 7px; border-radius: 6px; cursor: pointer;">Settings</button>
       </div>
 
-      <div style="display:flex; gap: 8px; margin-bottom: 14px;">
-        <button class="confirm-btn cancel-mode" id="adminScreenshotBtn" style="flex:1; padding: 8px;">Screenshot view</button>
-        <button class="confirm-btn cancel-mode" id="adminCopyBtn" style="flex:1; padding: 8px;">Copy as text</button>
+      <div id="adminTabSignups">
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 11px; color: var(--ws-ice-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display:block; margin-bottom: 6px;">Day</label>
+          <select id="adminDaySelect"></select>
+        </div>
+
+        <div style="display:flex; gap: 8px; margin-bottom: 14px;">
+          <button class="confirm-btn cancel-mode" id="adminScreenshotBtn" style="flex:1; padding: 8px;">Screenshot view</button>
+          <button class="confirm-btn cancel-mode" id="adminCopyBtn" style="flex:1; padding: 8px;">Copy as text</button>
+        </div>
+
+        <div id="adminListContent" style="margin-bottom: 16px;"></div>
+
+        <div style="border-top: 0.5px solid var(--ws-frost-border); padding-top: 14px;">
+          <p style="font-size: 12px; color: var(--ws-ice-dim); margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Add a sign-up manually</p>
+          <div class="row2" style="margin-bottom: 0.6rem;">
+            <select id="adminAddSlot"></select>
+            <input type="text" id="adminAddPseudo" placeholder="Pseudo">
+          </div>
+          <div class="row2" style="margin-bottom: 0.8rem;">
+            <input type="text" id="adminAddId" placeholder="ID">
+            <select id="adminAddAlliance">
+              <option value="CAT">CAT</option>
+              <option value="SUN">SUN</option>
+              <option value="ANG">ANG</option>
+              <option value="EMP">EMP</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="other-field" id="adminOtherField" style="margin-bottom: 0.8rem;">
+            <input type="text" id="adminOtherAlliance" placeholder="Enter alliance name">
+          </div>
+          <button class="confirm-btn" id="adminAddBtn" style="width: 100%;">Add sign-up</button>
+          <p class="status" id="adminAddStatus"></p>
+        </div>
       </div>
 
-      <div id="adminListContent" style="margin-bottom: 16px;"></div>
+      <div id="adminTabMessages" style="display:none;">
+        <div id="messageBlocks"></div>
+      </div>
 
-      <div style="border-top: 0.5px solid var(--ws-frost-border); padding-top: 14px;">
-        <p style="font-size: 12px; color: var(--ws-ice-dim); margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Add a sign-up manually</p>
-        <div class="row2" style="margin-bottom: 0.6rem;">
-          <select id="adminAddSlot"></select>
-          <input type="text" id="adminAddPseudo" placeholder="Pseudo">
+      <div id="adminTabSettings" style="display:none;">
+        <p style="font-size: 12px; color: var(--ws-ice-dim); margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Change admin password</p>
+        <input type="password" id="newPasswordInput" placeholder="New password" style="margin-bottom: 10px;">
+        <button class="confirm-btn" id="changePasswordBtn" style="width:100%;">Update password</button>
+        <p class="status" id="passwordChangeStatus"></p>
+        <p style="font-size: 11px; color: var(--ws-ice-faint); margin-top: 14px; line-height: 1.5;">The password is stored in shared storage and used only to unlock this panel. Make sure to remember it, there is no recovery option.</p>
+
+        <div style="border-top: 0.5px solid var(--ws-frost-border); margin-top: 18px; padding-top: 18px;">
+          <p style="font-size: 12px; color: var(--ws-ice-dim); margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Public access curtain</p>
+          <span class="curtain-status-badge" id="curtainStatusBadge">Loading...</span>
+          <p style="font-size: 11.5px; color: var(--ws-ice-faint); margin: 0 0 10px; line-height: 1.5;">When enabled, players see a holding screen instead of the sign-up form. Use this while you're still setting things up.</p>
+          <button class="confirm-btn cancel-mode" id="toggleCurtainBtn" style="width:100%;">Enable curtain (hide from players)</button>
         </div>
-        <div class="row2" style="margin-bottom: 0.8rem;">
-          <input type="text" id="adminAddId" placeholder="ID">
-          <select id="adminAddAlliance">
-            <option value="CAT">CAT</option>
-            <option value="SUN">SUN</option>
-            <option value="ANG">ANG</option>
-            <option value="EMP">EMP</option>
-            <option value="OTHER">Other</option>
-          </select>
-        </div>
-        <div class="other-field" id="adminOtherField" style="margin-bottom: 0.8rem;">
-          <input type="text" id="adminOtherAlliance" placeholder="Enter alliance name">
-        </div>
-        <button class="confirm-btn" id="adminAddBtn" style="width: 100%;">Add sign-up</button>
-        <p class="status" id="adminAddStatus"></p>
       </div>
     </div>
   </div>
@@ -292,6 +359,15 @@
     <p id="screenshotTitle" style="text-align: center; font-family: var(--font-display); font-size: 22px; color: var(--ws-gold); margin: 0 0 18px; letter-spacing: 0.5px;"></p>
     <div id="screenshotContent"></div>
     <button class="confirm-btn cancel-mode" id="screenshotCloseBtn" style="width: 100%; margin-top: 18px;">Close</button>
+  </div>
+</div>
+
+<div id="publicCurtain" style="display:none; position: fixed; inset: 0; background: var(--ws-bg-deep); z-index: 70; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center;">
+  <a href="#" id="curtainAdminLink" style="position: absolute; top: 18px; right: 20px; color: var(--ws-ice-faint); text-decoration: underline; font-size: 10px; cursor: pointer; letter-spacing: 0.3px;">Admin</a>
+  <div>
+    <p style="font-size: 11px; color: var(--ws-gold-dim); letter-spacing: 3px; text-transform: uppercase; margin: 0 0 10px;">State 2679</p>
+    <p style="font-family: var(--font-display); font-size: 24px; color: var(--ws-ice); margin: 0 0 14px; letter-spacing: 0.5px;">Sign-Up Coming Soon</p>
+    <p style="font-size: 13px; color: var(--ws-ice-dim); max-width: 320px; margin: 0 auto; line-height: 1.6;">The SvS Prep Buff schedule will open shortly.<br>Please await further announcements.</p>
   </div>
 </div>
 
@@ -484,13 +560,29 @@ function getMyId() {
 
 async function refreshBookedTabs() {
   const myId = getMyId();
+  const myBookings = [];
   for (const d of DAYS) {
     if (d.slots.length === 0) continue;
     const b = await loadBookings(d.key);
-    dayBookingCache[d.key] = Object.values(b).some(entry => entry.sessionId === myId);
+    const mine = Object.entries(b).find(([slot, entry]) => entry.sessionId === myId);
+    dayBookingCache[d.key] = !!mine;
     dayAvailabilityCache[d.key] = d.slots.length - Object.keys(b).length;
+    if (mine) myBookings.push({ day: d.label, slot: mine[0] });
   }
   renderDayTabs();
+  renderMyBookings(myBookings);
+}
+
+function renderMyBookings(myBookings) {
+  const box = document.getElementById('myBookingsBox');
+  if (myBookings.length === 0) {
+    box.classList.remove('visible');
+    box.innerHTML = '';
+    return;
+  }
+  box.classList.add('visible');
+  box.innerHTML = `<span class="title">Your sign-ups this week</span>` +
+    myBookings.map(b => `<span class="item">${b.day} ${b.slot}</span>`).join('');
 }
 
 function updateConfirmBar() {
@@ -638,6 +730,9 @@ document.addEventListener('click', (e) => {
 });
 
 document.getElementById('confirmBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('confirmBtn');
+  if (btn.disabled) return;
+
   const statusEl = document.getElementById('status');
   const pseudo = document.getElementById('pseudo').value.trim();
   const playerId = document.getElementById('playerId').value.trim();
@@ -652,69 +747,106 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
   }
   if (!selectedSlot) { statusEl.className = 'status err'; statusEl.textContent = 'Please select a slot first.'; return; }
 
-  bookings = await loadBookings(currentDay);
-  const existing = bookings[selectedSlot];
-  const myId = getMyId();
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Please wait...';
 
-  if (existing && existing.sessionId === myId) {
-    delete bookings[selectedSlot];
+  try {
+    bookings = await loadBookings(currentDay);
+    const existing = bookings[selectedSlot];
+    const myId = getMyId();
+
+    if (existing && existing.sessionId === myId) {
+      delete bookings[selectedSlot];
+      const ok = await saveBookings(currentDay, bookings);
+      if (ok) {
+        showToast('Your sign up has been cancelled.');
+        statusEl.textContent = '';
+      } else {
+        statusEl.className = 'status err';
+        statusEl.textContent = 'Your cancellation was not saved. Please try clicking again.';
+      }
+      selectedSlot = null;
+      await renderSlots();
+      await refreshBookedTabs();
+      return;
+    }
+
+    if (existing) {
+      statusEl.className = 'status err';
+      statusEl.textContent = 'This slot was just taken by someone else. Please pick another one.';
+      selectedSlot = null;
+      await renderSlots();
+      return;
+    }
+
+    const alreadyBookedSlot = Object.entries(bookings).find(([s, b]) => b.sessionId === myId);
+    if (alreadyBookedSlot) {
+      statusEl.className = 'status err';
+      statusEl.textContent = 'You already have a slot this day (' + alreadyBookedSlot[0] + '). Cancel it first to pick another one.';
+      return;
+    }
+
+    bookings[selectedSlot] = { pseudo, playerId, alliance, sessionId: myId, ts: Date.now() };
     const ok = await saveBookings(currentDay, bookings);
     if (ok) {
-      showToast('Your sign up has been cancelled.');
+      showToast(`Sign up confirmed for ${selectedSlot}. See you there, ${pseudo}!`);
       statusEl.textContent = '';
     } else {
-      statusEl.className = 'status err'; statusEl.textContent = 'Something went wrong, please try again.';
+      statusEl.className = 'status err';
+      statusEl.textContent = 'Your sign up was not saved. Please try clicking again.';
     }
     selectedSlot = null;
-    renderSlots();
-    refreshBookedTabs();
-    return;
+    await renderSlots();
+    await refreshBookedTabs();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
-
-  if (existing) {
-    statusEl.className = 'status err';
-    statusEl.textContent = 'This slot was just taken by someone else. Please pick another.';
-    selectedSlot = null;
-    renderSlots();
-    return;
-  }
-
-  const alreadyBookedSlot = Object.entries(bookings).find(([s, b]) => b.sessionId === myId);
-  if (alreadyBookedSlot) {
-    statusEl.className = 'status err';
-    statusEl.textContent = 'You already have a slot this day (' + alreadyBookedSlot[0] + '). Cancel it first to pick another one.';
-    return;
-  }
-
-  bookings[selectedSlot] = { pseudo, playerId, alliance, sessionId: myId, ts: Date.now() };
-  const ok = await saveBookings(currentDay, bookings);
-  if (ok) {
-    showToast(`Sign up confirmed for ${selectedSlot}. See you there, ${pseudo}!`);
-    statusEl.textContent = '';
-  } else {
-    statusEl.className = 'status err';
-    statusEl.textContent = 'Network error, please try again.';
-  }
-  selectedSlot = null;
-  renderSlots();
-  refreshBookedTabs();
 });
 
 renderDayTabs();
 renderSlots();
 refreshBookedTabs();
+checkCurtain();
 
 /* Admin panel */
-const ADMIN_PASSWORD = 'icewatch2679';
+const DEFAULT_ADMIN_PASSWORD = 'icewatch2679';
 
-document.getElementById('adminLink').addEventListener('click', (e) => {
+async function getAdminPassword() {
+  try {
+    const result = await window.storage.get('admin-password', true);
+    return result ? result.value : DEFAULT_ADMIN_PASSWORD;
+  } catch (e) {
+    return DEFAULT_ADMIN_PASSWORD;
+  }
+}
+
+async function checkCurtain() {
+  try {
+    const result = await window.storage.get('curtain-enabled', true);
+    // Curtain is ON by default. It only turns off once explicitly set to 'false'.
+    if (!result || result.value !== 'false') {
+      document.getElementById('publicCurtain').style.display = 'flex';
+    } else {
+      document.getElementById('publicCurtain').style.display = 'none';
+    }
+  } catch (e) {
+    // Key doesn't exist yet, or storage error: default to curtain ON.
+    document.getElementById('publicCurtain').style.display = 'flex';
+  }
+}
+
+function openAdmin(e) {
   e.preventDefault();
   document.getElementById('adminOverlay').style.display = 'flex';
   document.getElementById('adminLoginView').style.display = 'block';
   document.getElementById('adminListView').style.display = 'none';
   document.getElementById('adminPassword').value = '';
   document.getElementById('adminLoginError').textContent = '';
-});
+}
+document.getElementById('adminLink').addEventListener('click', openAdmin);
+document.getElementById('curtainAdminLink').addEventListener('click', openAdmin);
 
 function closeAdmin() {
   document.getElementById('adminOverlay').style.display = 'none';
@@ -724,7 +856,8 @@ document.getElementById('adminCloseBtn2').addEventListener('click', closeAdmin);
 
 document.getElementById('adminLoginBtn').addEventListener('click', async () => {
   const pw = document.getElementById('adminPassword').value;
-  if (pw !== ADMIN_PASSWORD) {
+  const correctPw = await getAdminPassword();
+  if (pw !== correctPw) {
     document.getElementById('adminLoginError').textContent = 'Incorrect password.';
     return;
   }
@@ -732,7 +865,120 @@ document.getElementById('adminLoginBtn').addEventListener('click', async () => {
   document.getElementById('adminListView').style.display = 'block';
   setupAdminDaySelect();
   setupAdminSlotSelect();
+  renderMessageBlocks();
+  await refreshCurtainButton();
   await renderAdminList();
+});
+
+/* Admin tabs */
+document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.style.background = 'var(--ws-bg-input)';
+      b.style.borderColor = 'var(--ws-frost-border)';
+      b.style.color = 'var(--ws-ice-dim)';
+    });
+    btn.classList.add('active');
+    btn.style.background = 'var(--ws-bg-panel-2)';
+    btn.style.borderColor = 'var(--ws-gold-dim)';
+    btn.style.color = 'var(--ws-gold)';
+
+    document.getElementById('adminTabSignups').style.display = btn.dataset.tab === 'signups' ? 'block' : 'none';
+    document.getElementById('adminTabMessages').style.display = btn.dataset.tab === 'messages' ? 'block' : 'none';
+    document.getElementById('adminTabSettings').style.display = btn.dataset.tab === 'settings' ? 'block' : 'none';
+  });
+});
+
+/* Pre-written messages */
+const MESSAGE_TEMPLATES = [
+  {
+    title: 'Monday Construction Buff (reminder)',
+    text: `🏗️ Monday Construction Buff\nA few Vice President buff slots are still available:\n🕔 17:45 🕖 19:45\nIf you'd like to secure one of these times for your Construction Buff, send me a DM.\nGood planning is attractive. Great results are irresistible. 😉`
+  },
+  {
+    title: 'Tuesday Research Buff (reminder)',
+    text: `🔬 Tuesday Research Buff\nA few Vice President buff slots are still available:\n🕔 17:45 🕖 19:45\nIf you'd like to secure one of these times for your Research Buff, send me a DM.\nA sharp mind is powerful. A top SVS score is unforgettable. 😉`
+  },
+  {
+    title: 'Thursday Troop Training Buff (reminder)',
+    text: `🪖 Thursday Troop Training Buff\nA few Vice President buff slots are still available:\n🕔 17:45 🕖 19:45\nIf you'd like to secure one of these times for your Troop Training Buff, send me a DM.\nStrong armies earn respect. Top SVS scores earn attention. 😉`
+  },
+  {
+    title: 'Slot confirmation (DM)',
+    text: `Hi Commander,\nYour VP buff slot is confirmed for 🕔 17:45.\nThank you for planning ahead.`
+  }
+];
+
+function renderMessageBlocks() {
+  const container = document.getElementById('messageBlocks');
+  container.innerHTML = MESSAGE_TEMPLATES.map((msg, i) => `
+    <div style="margin-bottom: 16px; background: var(--ws-bg-input); border: 0.5px solid var(--ws-frost-border); border-radius: var(--border-radius-md); padding: 12px;">
+      <p style="font-size: 12px; font-weight: 600; color: var(--ws-gold); margin: 0 0 8px;">${msg.title}</p>
+      <pre style="white-space: pre-wrap; font-family: var(--font-sans); font-size: 12.5px; color: var(--ws-ice); margin: 0 0 10px; line-height: 1.5;">${msg.text}</pre>
+      <button class="confirm-btn cancel-mode msg-copy-btn" data-index="${i}" style="width: 100%; padding: 7px;">Copy message</button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.msg-copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const msg = MESSAGE_TEMPLATES[parseInt(btn.dataset.index)];
+      try {
+        await navigator.clipboard.writeText(msg.text);
+        showToast('Message copied to clipboard.');
+      } catch (e) {
+        showToast('Could not copy automatically, please select the text manually.');
+      }
+    });
+  });
+}
+
+/* Password change */
+document.getElementById('changePasswordBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('passwordChangeStatus');
+  const newPw = document.getElementById('newPasswordInput').value.trim();
+  if (!newPw || newPw.length < 4) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Password must be at least 4 characters.';
+    return;
+  }
+  try {
+    await window.storage.set('admin-password', newPw, true);
+    statusEl.className = 'status ok';
+    statusEl.textContent = 'Password updated.';
+    document.getElementById('newPasswordInput').value = '';
+  } catch (e) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Something went wrong, please try again.';
+  }
+});
+
+/* Curtain toggle */
+async function refreshCurtainButton() {
+  const btn = document.getElementById('toggleCurtainBtn');
+  const badge = document.getElementById('curtainStatusBadge');
+  let enabled = true; // curtain is ON by default
+  try {
+    const result = await window.storage.get('curtain-enabled', true);
+    enabled = !result || result.value !== 'false';
+  } catch (e) { /* key not set yet, stays ON by default */ }
+  btn.textContent = enabled ? 'Disable curtain (show to players)' : 'Enable curtain (hide from players)';
+  btn.dataset.enabled = enabled ? 'true' : 'false';
+  badge.textContent = enabled ? 'Currently ON, players cannot sign up' : 'Currently OFF, players can sign up';
+  badge.className = 'curtain-status-badge ' + (enabled ? 'on' : 'off');
+}
+
+document.getElementById('toggleCurtainBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('toggleCurtainBtn');
+  const newState = btn.dataset.enabled === 'true' ? 'false' : 'true';
+  try {
+    await window.storage.set('curtain-enabled', newState, true);
+    await refreshCurtainButton();
+    await checkCurtain();
+    showToast(newState === 'true' ? 'Curtain enabled. Players will see a holding screen.' : 'Curtain disabled. Players can now sign up.');
+  } catch (e) {
+    showToast('Something went wrong, please try again.');
+  }
 });
 
 const ADMIN_VIEWS = [
