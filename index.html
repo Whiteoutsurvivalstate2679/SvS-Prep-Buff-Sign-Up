@@ -83,7 +83,16 @@
   }
   .day-tab .d { font-weight: 600; display: block; color: var(--ws-ice); letter-spacing: 0.3px; }
   .day-tab .b { font-size: 10px; color: var(--ws-ice-faint); display: block; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .day-tab .a { font-size: 10px; color: var(--ws-success); display: block; margin-top: 2px; font-weight: 600; letter-spacing: 0.3px; }
+  .day-tab .a { font-size: 10px; display: block; margin-top: 2px; font-weight: 600; letter-spacing: 0.3px; }
+  .day-tab .a.high { color: var(--ws-success); }
+  .day-tab .a.low { color: var(--ws-gold); }
+  .day-tab .a.full { color: var(--ws-danger); }
+  .day-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 1rem; padding-bottom: 0.85rem; border-bottom: 0.5px solid var(--ws-frost-border);
+  }
+  .day-summary .label { font-size: 13px; color: var(--ws-ice-dim); letter-spacing: 0.2px; }
+  .day-summary .count { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; color: var(--ws-gold); }
   .day-tab.active { background: var(--ws-bg-panel-2); border-color: var(--ws-gold-dim); box-shadow: 0 0 0 1px rgba(232,184,109,0.15) inset; }
   .day-tab.active .d { color: var(--ws-gold); }
   .day-tab.active .b { color: var(--ws-gold-dim); }
@@ -200,6 +209,7 @@
   <div class="day-tabs" id="dayTabs"></div>
 
   <div class="card">
+    <div id="daySummary" class="day-summary"></div>
     <div id="slotsContainer" class="loading">Loading slots...</div>
     <div class="legend">
       <span><span class="dot free"></span> Open</span>
@@ -241,6 +251,11 @@
         <select id="adminDaySelect"></select>
       </div>
 
+      <div style="display:flex; gap: 8px; margin-bottom: 14px;">
+        <button class="confirm-btn cancel-mode" id="adminScreenshotBtn" style="flex:1; padding: 8px;">Screenshot view</button>
+        <button class="confirm-btn cancel-mode" id="adminCopyBtn" style="flex:1; padding: 8px;">Copy as text</button>
+      </div>
+
       <div id="adminListContent" style="margin-bottom: 16px;"></div>
 
       <div style="border-top: 0.5px solid var(--ws-frost-border); padding-top: 14px;">
@@ -259,6 +274,9 @@
             <option value="OTHER">Other</option>
           </select>
         </div>
+        <div class="other-field" id="adminOtherField" style="margin-bottom: 0.8rem;">
+          <input type="text" id="adminOtherAlliance" placeholder="Enter alliance name">
+        </div>
         <button class="confirm-btn" id="adminAddBtn" style="width: 100%;">Add sign-up</button>
         <p class="status" id="adminAddStatus"></p>
       </div>
@@ -267,6 +285,15 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div id="screenshotOverlay" style="display:none; position: fixed; inset: 0; background: var(--ws-bg-deep); z-index: 60; overflow-y: auto; padding: 2rem 1rem;">
+  <div style="max-width: 420px; margin: 0 auto;">
+    <p style="text-align: center; font-size: 10px; color: var(--ws-ice-faint); letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 6px;">Whiteout Survival, State 2679</p>
+    <p id="screenshotTitle" style="text-align: center; font-family: var(--font-display); font-size: 22px; color: var(--ws-gold); margin: 0 0 18px; letter-spacing: 0.5px;"></p>
+    <div id="screenshotContent"></div>
+    <button class="confirm-btn cancel-mode" id="screenshotCloseBtn" style="width: 100%; margin-top: 18px;">Close</button>
+  </div>
+</div>
 
 <script>
 /* Snowfall background */
@@ -414,18 +441,12 @@ let selectedSlot = null;
 
 function renderDayTabs() {
   const el = document.getElementById('dayTabs');
-  el.innerHTML = DAYS.map(d => {
-    const availCount = dayAvailabilityCache[d.key];
-    const availLabel = (d.slots.length > 0 && availCount !== undefined)
-      ? `<span class="a">${availCount} open</span>` : '';
-    return `
+  el.innerHTML = DAYS.map(d => `
     <div class="day-tab ${d.key === currentDay ? 'active' : ''} ${d.nobuff && d.slots.length === 0 ? 'nobuff' : ''} ${dayBookingCache[d.key] ? 'booked' : ''}" data-day="${d.key}">
       <span class="d">${d.label}</span>
       <span class="b">${d.buff}</span>
-      ${availLabel}
     </div>
-  `;
-  }).join('');
+  `).join('');
   el.querySelectorAll('.day-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       currentDay = tab.dataset.day;
@@ -495,18 +516,27 @@ function updateConfirmBar() {
 
 async function renderSlots() {
   const container = document.getElementById('slotsContainer');
+  const summaryEl = document.getElementById('daySummary');
   document.getElementById('confirmBar').style.display = 'none';
   container.className = 'loading';
   container.textContent = 'Loading slots...';
 
   const day = DAYS.find(d => d.key === currentDay);
-  if (day.nobuff) {
+  if (day.nobuff && day.slots.length === 0) {
+    summaryEl.innerHTML = '';
     container.className = 'empty-state';
     container.textContent = 'No buff scheduled this day, no sign up needed.';
     return;
   }
 
   bookings = await loadBookings(currentDay);
+  const takenCount = Object.keys(bookings).length;
+  const openCount = day.slots.length - takenCount;
+  summaryEl.innerHTML = `
+    <span class="label">${day.label}, ${day.buff}</span>
+    <span class="count">${openCount} of ${day.slots.length} slots open</span>
+  `;
+
   container.className = 'grid';
   container.innerHTML = day.slots.map((slot) => {
     const booking = bookings[slot];
@@ -749,7 +779,7 @@ async function renderAdminList() {
   const merged = await loadMergedBookings(view);
   const entries = Object.entries(merged).sort((a, b2) => view.slots.indexOf(a[0]) - view.slots.indexOf(b2[0]));
 
-  let html = `<p style="text-align: center; font-family: var(--font-display); font-size: 16px; color: var(--ws-gold); margin: 0 0 12px; letter-spacing: 0.5px;">${view.label} — ${view.buff}</p>`;
+  let html = `<p style="text-align: center; font-family: var(--font-display); font-size: 16px; color: var(--ws-gold); margin: 0 0 12px; letter-spacing: 0.5px;">${view.label}, ${view.buff}</p>`;
 
   if (entries.length === 0) {
     html += `<p style="font-size: 12px; color: var(--ws-ice-faint); text-align: center;">No sign-ups yet for ${view.label}.</p>`;
@@ -782,16 +812,79 @@ async function renderAdminList() {
   });
 }
 
+document.getElementById('adminScreenshotBtn').addEventListener('click', async () => {
+  const view = ADMIN_VIEWS.find(v => v.key === adminCurrentView);
+  const merged = await loadMergedBookings(view);
+  const entries = Object.entries(merged).sort((a, b2) => view.slots.indexOf(a[0]) - view.slots.indexOf(b2[0]));
+
+  document.getElementById('screenshotTitle').textContent = `${view.label}, ${view.buff}`;
+  const content = document.getElementById('screenshotContent');
+
+  if (entries.length === 0) {
+    content.innerHTML = `<p style="text-align:center; font-size: 13px; color: var(--ws-ice-faint);">No sign-ups yet.</p>`;
+  } else {
+    let html = `<div style="border: 0.5px solid var(--ws-frost-border); border-radius: var(--border-radius-md); overflow: hidden;">`;
+    entries.forEach(([slot, entry], i) => {
+      html += `<div style="display: flex; gap: 14px; padding: 9px 14px; font-size: 13px; ${i % 2 === 0 ? 'background: var(--ws-bg-panel);' : ''} color: var(--ws-ice);">
+        <span style="min-width: 50px; color: var(--ws-gold); font-weight: 600;">${slot}</span>
+        <span style="flex: 1;">${entry.pseudo}</span>
+        <span style="color: var(--ws-ice-dim);">${entry.alliance}</span>
+      </div>`;
+    });
+    html += `</div>`;
+    content.innerHTML = html;
+  }
+
+  document.getElementById('screenshotOverlay').style.display = 'block';
+});
+
+document.getElementById('screenshotCloseBtn').addEventListener('click', () => {
+  document.getElementById('screenshotOverlay').style.display = 'none';
+});
+
+document.getElementById('adminCopyBtn').addEventListener('click', async () => {
+  const view = ADMIN_VIEWS.find(v => v.key === adminCurrentView);
+  const merged = await loadMergedBookings(view);
+  const entries = Object.entries(merged).sort((a, b2) => view.slots.indexOf(a[0]) - view.slots.indexOf(b2[0]));
+
+  let text = `${view.label}, ${view.buff}\n`;
+  if (entries.length === 0) {
+    text += 'No sign-ups yet.';
+  } else {
+    entries.forEach(([slot, entry]) => {
+      text += `${slot}  ${entry.pseudo}  [${entry.alliance}]  ${entry.playerId}\n`;
+    });
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('List copied to clipboard.');
+  } catch (e) {
+    showToast('Could not copy automatically, please select the text manually.');
+  }
+});
+
+document.getElementById('adminAddAlliance').addEventListener('change', (e) => {
+  document.getElementById('adminOtherField').classList.toggle('visible', e.target.value === 'OTHER');
+});
+
 document.getElementById('adminAddBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('adminAddStatus');
   const slot = document.getElementById('adminAddSlot').value;
   const pseudo = document.getElementById('adminAddPseudo').value.trim();
   const playerId = document.getElementById('adminAddId').value.trim();
-  const alliance = document.getElementById('adminAddAlliance').value;
+  const allianceSelect = document.getElementById('adminAddAlliance').value;
+  const adminOtherAlliance = document.getElementById('adminOtherAlliance').value.trim();
+  const alliance = allianceSelect === 'OTHER' ? adminOtherAlliance : allianceSelect;
 
   if (!pseudo || !playerId) {
     statusEl.className = 'status err';
     statusEl.textContent = 'Please fill in pseudo and ID.';
+    return;
+  }
+  if (allianceSelect === 'OTHER' && !adminOtherAlliance) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Please specify the alliance name.';
     return;
   }
 
@@ -813,6 +906,7 @@ document.getElementById('adminAddBtn').addEventListener('click', async () => {
     statusEl.textContent = `Added ${pseudo} to ${slot}.`;
     document.getElementById('adminAddPseudo').value = '';
     document.getElementById('adminAddId').value = '';
+    document.getElementById('adminOtherAlliance').value = '';
     await renderAdminList();
   } else {
     statusEl.className = 'status err';
