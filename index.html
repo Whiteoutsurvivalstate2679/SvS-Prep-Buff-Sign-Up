@@ -194,7 +194,13 @@
   }
   .my-bookings-box.visible { display: block; }
   .my-bookings-box .title { font-weight: 600; color: var(--ws-gold); margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
-  .my-bookings-box .item { display: inline-block; margin: 2px 6px 2px 0; }
+  .my-bookings-box .item { display: inline-flex; align-items: center; gap: 5px; margin: 2px 6px 2px 0; background: var(--ws-bg-input); padding: 3px 4px 3px 9px; border-radius: 999px; }
+  .quick-cancel-btn {
+    background: none; border: none; color: var(--ws-ice-faint); cursor: pointer;
+    font-size: 11px; width: 16px; height: 16px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; transition: all 0.15s; padding: 0;
+  }
+  .quick-cancel-btn:hover { background: var(--ws-danger-bg); color: var(--ws-danger); }
 
   /* ===== Admin panel styling ===== */
   .admin-shell {
@@ -364,8 +370,9 @@
       </div>
 
       <div class="admin-tabs-row">
-        <button class="admin-tab-btn active" data-tab="signups">Sign-Ups</button>
+        <button class="admin-tab-btn active" data-tab="signups">Manage</button>
         <button class="admin-tab-btn" data-tab="overview">Overview</button>
+        <button class="admin-tab-btn" data-tab="history">History</button>
         <button class="admin-tab-btn" data-tab="messages">Messages</button>
         <button class="admin-tab-btn" data-tab="settings">Settings</button>
       </div>
@@ -412,6 +419,23 @@
           <button class="confirm-btn cancel-mode" id="overviewCopyBtn" style="flex:1; padding: 8px;">📋 Copy full week as text</button>
         </div>
         <div id="overviewContent"></div>
+      </div>
+
+      <div id="adminTabHistory" style="display:none;">
+        <p class="admin-helptext" style="margin-bottom: 14px;">Every confirm, cancel, and failed attempt is logged here for 2 weeks, then automatically removed. Hidden from players.</p>
+        <div class="row2" style="margin-bottom: 14px;">
+          <select id="historyFilterType">
+            <option value="all">All event types</option>
+            <option value="confirm">Confirm attempts</option>
+            <option value="cancel">Cancellations</option>
+          </select>
+          <select id="historyFilterResult">
+            <option value="all">All results</option>
+            <option value="success">Success only</option>
+            <option value="failed">Failed only</option>
+          </select>
+        </div>
+        <div id="historyContent"></div>
       </div>
 
       <div id="adminTabMessages" style="display:none;">
@@ -663,6 +687,23 @@ function getMyId() {
   return 'player-' + pseudo.replace(/[^a-z0-9]/g, '') + '-' + playerId.replace(/[^0-9]/g, '');
 }
 
+/* History log: every confirm attempt (success, failure, or cancellation) gets recorded here.
+   Kept for 2 weeks, then automatically purged on next write. Hidden from players, admin only. */
+const HISTORY_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
+
+async function logHistoryEvent(event) {
+  try {
+    const result = await window.storage.get('signup-history', true);
+    let history = result ? JSON.parse(result.value) : [];
+    const cutoff = Date.now() - HISTORY_RETENTION_MS;
+    history = history.filter(e => e.ts >= cutoff);
+    history.push({ ...event, ts: Date.now() });
+    await window.storage.set('signup-history', JSON.stringify(history), true);
+  } catch (e) {
+    // History logging must never block the actual booking flow
+  }
+}
+
 async function refreshBookedTabs() {
   const myId = getMyId();
   const myBookings = [];
@@ -672,7 +713,7 @@ async function refreshBookedTabs() {
     const mine = Object.entries(b).find(([slot, entry]) => entry.sessionId === myId);
     dayBookingCache[d.key] = !!mine;
     dayAvailabilityCache[d.key] = d.slots.length - Object.keys(b).length;
-    if (mine) myBookings.push({ day: d.label, slot: mine[0] });
+    if (mine) myBookings.push({ dayKey: d.key, dayLabel: d.label, slot: mine[0] });
   }
   renderDayTabs();
   renderMyBookings(myBookings);
@@ -687,7 +728,41 @@ function renderMyBookings(myBookings) {
   }
   box.classList.add('visible');
   box.innerHTML = `<span class="title">Your sign-ups this week</span>` +
-    myBookings.map(b => `<span class="item">${b.day} ${b.slot}</span>`).join('');
+    myBookings.map(b => `
+      <span class="item">${b.dayLabel} ${b.slot}
+        <button class="quick-cancel-btn" data-day="${b.dayKey}" data-slot="${b.slot}" title="Cancel this sign-up">✕</button>
+      </span>
+    `).join('');
+
+  box.querySelectorAll('.quick-cancel-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const dayKey = btn.dataset.day;
+      const slot = btn.dataset.slot;
+      const ok = window.confirm(`Cancel your sign-up for ${slot}?`);
+      if (!ok) return;
+
+      const dayBookings = await loadBookings(dayKey);
+      const myId = getMyId();
+      const entry = dayBookings[slot];
+      if (entry && entry.sessionId === myId) {
+        delete dayBookings[slot];
+        const saved = await saveBookings(dayKey, dayBookings);
+        if (saved) {
+          showToast('Your sign up has been cancelled.');
+          const day = DAYS.find(d => d.key === dayKey);
+          logHistoryEvent({ type: 'cancel', result: 'success', pseudo: entry.pseudo, playerId: entry.playerId, alliance: entry.alliance, day: day.label, slot });
+          if (dayKey === currentDay) {
+            selectedSlot = null;
+            await renderSlots();
+          }
+          await refreshBookedTabs();
+        } else {
+          showToast('Could not cancel. Please try again.');
+        }
+      }
+    });
+  });
 }
 
 function updateConfirmBar() {
@@ -903,6 +978,7 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
     bookings = await loadBookings(currentDay);
     const existing = bookings[selectedSlot];
     const myId = getMyId();
+    const day = DAYS.find(d => d.key === currentDay);
 
     if (existing && existing.sessionId === myId) {
       delete bookings[selectedSlot];
@@ -910,9 +986,11 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
       if (ok) {
         showToast('Your sign up has been cancelled.');
         statusEl.textContent = '';
+        logHistoryEvent({ type: 'cancel', result: 'success', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
       } else {
         statusEl.className = 'status err';
         statusEl.textContent = 'Your cancellation was not saved. Please try clicking again.';
+        logHistoryEvent({ type: 'cancel', result: 'failed_save', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
       }
       selectedSlot = null;
       await renderSlots();
@@ -923,6 +1001,7 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
     if (existing) {
       statusEl.className = 'status err';
       statusEl.textContent = 'This slot was just taken by someone else. Please pick another one.';
+      logHistoryEvent({ type: 'confirm', result: 'failed_taken', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
       selectedSlot = null;
       await renderSlots();
       return;
@@ -932,19 +1011,21 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
     if (alreadyBookedSlot) {
       statusEl.className = 'status err';
       statusEl.textContent = 'You already have a slot this day (' + alreadyBookedSlot[0] + '). Cancel it first to pick another one.';
+      logHistoryEvent({ type: 'confirm', result: 'failed_already_booked', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
       return;
     }
 
     bookings[selectedSlot] = { pseudo, playerId, alliance, sessionId: myId, ts: Date.now() };
     const ok = await saveBookings(currentDay, bookings);
     if (ok) {
-      const day = DAYS.find(d => d.key === currentDay);
       showToast(`Sign up confirmed for ${selectedSlot}. See you there, ${pseudo}!`);
       showConfirmationModal({ pseudo, alliance, dayLabel: day.label, buff: day.buff, slot: selectedSlot });
       statusEl.textContent = '';
+      logHistoryEvent({ type: 'confirm', result: 'success', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
     } else {
       statusEl.className = 'status err';
       statusEl.textContent = 'Your sign up was not saved. Please try clicking again.';
+      logHistoryEvent({ type: 'confirm', result: 'failed_save', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
     }
     selectedSlot = null;
     await renderSlots();
@@ -1028,10 +1109,12 @@ document.querySelectorAll('.admin-tab-btn').forEach(btn => {
 
     document.getElementById('adminTabSignups').style.display = btn.dataset.tab === 'signups' ? 'block' : 'none';
     document.getElementById('adminTabOverview').style.display = btn.dataset.tab === 'overview' ? 'block' : 'none';
+    document.getElementById('adminTabHistory').style.display = btn.dataset.tab === 'history' ? 'block' : 'none';
     document.getElementById('adminTabMessages').style.display = btn.dataset.tab === 'messages' ? 'block' : 'none';
     document.getElementById('adminTabSettings').style.display = btn.dataset.tab === 'settings' ? 'block' : 'none';
 
     if (btn.dataset.tab === 'overview') await renderOverview();
+    if (btn.dataset.tab === 'history') await renderHistory();
   });
 });
 
@@ -1287,6 +1370,56 @@ document.getElementById('overviewCopyBtn').addEventListener('click', async () =>
     showToast('Could not copy automatically, please select the text manually.');
   }
 });
+
+async function renderHistory() {
+  const content = document.getElementById('historyContent');
+  content.innerHTML = '<p style="color: var(--ws-ice-faint); font-size: 13px;">Loading...</p>';
+
+  let history = [];
+  try {
+    const result = await window.storage.get('signup-history', true);
+    history = result ? JSON.parse(result.value) : [];
+  } catch (e) { /* no history yet */ }
+
+  const typeFilter = document.getElementById('historyFilterType').value;
+  const resultFilter = document.getElementById('historyFilterResult').value;
+
+  let filtered = history.slice().sort((a, b) => b.ts - a.ts);
+  if (typeFilter !== 'all') filtered = filtered.filter(e => e.type === typeFilter);
+  if (resultFilter === 'success') filtered = filtered.filter(e => e.result === 'success');
+  if (resultFilter === 'failed') filtered = filtered.filter(e => e.result !== 'success');
+
+  if (filtered.length === 0) {
+    content.innerHTML = '<p style="font-size: 12px; color: var(--ws-ice-faint); text-align: center;">No events match this filter.</p>';
+    return;
+  }
+
+  const RESULT_LABELS = {
+    success: { text: 'Success', color: 'var(--ws-success)' },
+    failed_taken: { text: 'Failed, slot taken', color: 'var(--ws-danger)' },
+    failed_already_booked: { text: 'Failed, already booked', color: 'var(--ws-danger)' },
+    failed_save: { text: 'Failed, save error', color: 'var(--ws-danger)' },
+  };
+
+  let html = `<div style="border: 0.5px solid var(--ws-frost-border); border-radius: var(--border-radius-md); overflow: hidden;">`;
+  filtered.forEach((e, i) => {
+    const resultInfo = RESULT_LABELS[e.result] || { text: e.result, color: 'var(--ws-ice-dim)' };
+    const date = new Date(e.ts);
+    const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    html += `<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; font-size: 11.5px; ${i % 2 === 0 ? 'background: var(--ws-bg-panel);' : ''} color: var(--ws-ice);">
+      <span style="min-width: 90px; color: var(--ws-ice-faint);">${dateStr}</span>
+      <span style="min-width: 60px; text-transform: capitalize; color: var(--ws-ice-dim);">${e.type}</span>
+      <span style="flex: 1;">${e.pseudo || '?'} [${e.alliance || '?'}]</span>
+      <span style="min-width: 60px; color: var(--ws-ice-dim);">${e.day || ''} ${e.slot || ''}</span>
+      <span style="min-width: 110px; font-weight: 600; color: ${resultInfo.color};">${resultInfo.text}</span>
+    </div>`;
+  });
+  html += `</div>`;
+  content.innerHTML = html;
+}
+
+document.getElementById('historyFilterType').addEventListener('change', renderHistory);
+document.getElementById('historyFilterResult').addEventListener('change', renderHistory);
 
 document.getElementById('adminScreenshotBtn').addEventListener('click', async () => {
   const view = ADMIN_VIEWS.find(v => v.key === adminCurrentView);
