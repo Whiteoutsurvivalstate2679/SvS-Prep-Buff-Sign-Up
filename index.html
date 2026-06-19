@@ -484,12 +484,13 @@
   </div>
 </div>
 
-<div id="publicCurtain" style="display:none; position: fixed; inset: 0; background: var(--ws-bg-deep); z-index: 70; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center;">
+<div id="publicCurtain" style="display:none; position: fixed; inset: 0; background: rgba(10,22,40,0.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 70; align-items: center; justify-content: center; padding: 2rem 1rem;">
   <a href="#" id="curtainAdminLink" style="position: absolute; top: 18px; right: 20px; color: var(--ws-ice-faint); text-decoration: underline; font-size: 10px; cursor: pointer; letter-spacing: 0.3px;">Admin</a>
-  <div>
-    <p style="font-size: 11px; color: var(--ws-gold-dim); letter-spacing: 3px; text-transform: uppercase; margin: 0 0 10px;">State 2679</p>
-    <p style="font-family: var(--font-display); font-size: 24px; color: var(--ws-ice); margin: 0 0 14px; letter-spacing: 0.5px;">Sign-Up Coming Soon</p>
-    <p style="font-size: 13px; color: var(--ws-ice-dim); max-width: 320px; margin: 0 auto; line-height: 1.6;">The SvS Prep Buff schedule will open shortly.<br>Please await further announcements.</p>
+  <div style="background: rgba(16,31,56,0.85); border: 0.5px solid rgba(232,184,109,0.45); border-radius: 16px; padding: 2.5rem 2.25rem; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 0 0 1px rgba(191,227,255,0.06) inset, 0 24px 64px rgba(0,0,0,0.55);">
+    <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(20,40,68,0.9); border: 0.5px solid var(--ws-gold-dim); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 26px;">🔒</div>
+    <p style="font-size: 11px; color: var(--ws-gold-dim); letter-spacing: 3px; text-transform: uppercase; margin: 0 0 10px; font-weight: 600;">State 2679</p>
+    <p style="font-family: var(--font-display); font-size: 22px; color: var(--ws-ice); margin: 0 0 14px; letter-spacing: 0.5px; text-shadow: 0 0 20px rgba(191,227,255,0.2);">Sign-Up Coming Soon</p>
+    <p style="font-size: 13px; color: var(--ws-ice-dim); line-height: 1.65; margin: 0;">The SvS Prep Buff schedule will open shortly.<br>Please await further announcements.</p>
   </div>
 </div>
 
@@ -655,53 +656,54 @@ function renderDayTabs() {
   });
 }
 
+// ── API CONFIG ──────────────────────────────────────────────
+// Replace this URL with your Google Apps Script Web App URL.
+const API_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+async function api(params) {
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+const _bCache = {};
+
 async function loadBookings(dayKey) {
   try {
-    const result = await window.storage.get('svs-bookings:' + dayKey, true);
-    return result ? JSON.parse(result.value) : {};
-  } catch (e) {
-    return {};
-  }
+    const data = await api({ action: 'getBookings', day: dayKey });
+    if (data.success) { _bCache[dayKey] = data.bookings; return data.bookings; }
+    return _bCache[dayKey] || {};
+  } catch (e) { return _bCache[dayKey] || {}; }
 }
 
 async function saveBookings(dayKey, data) {
-  try {
-    await window.storage.set('svs-bookings:' + dayKey, JSON.stringify(data), true);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  // Writes now go through book/cancel API actions — this stub prevents errors
+  return true;
 }
 
 function getMyId() {
   const pseudo = (document.getElementById('pseudo').value || '').trim().toLowerCase();
   const playerId = (document.getElementById('playerId').value || '').trim();
   if (!pseudo || !playerId) {
-    // Not enough info yet to derive a stable identity, fall back to a temporary session-only id
-    if (!window._fallbackSessionId) {
-      window._fallbackSessionId = 'temp-' + Math.random().toString(36).slice(2, 10);
-    }
+    if (!window._fallbackSessionId) window._fallbackSessionId = 'temp-' + Math.random().toString(36).slice(2, 10);
     return window._fallbackSessionId;
   }
-  // Stable identity: same pseudo + ID always produces the same key, regardless of device or reload
   return 'player-' + pseudo.replace(/[^a-z0-9]/g, '') + '-' + playerId.replace(/[^0-9]/g, '');
 }
 
-/* History log: every confirm attempt (success, failure, or cancellation) gets recorded here.
-   Kept for 2 weeks, then automatically purged on next write. Hidden from players, admin only. */
-const HISTORY_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
-
 async function logHistoryEvent(event) {
-  try {
-    const result = await window.storage.get('signup-history', true);
-    let history = result ? JSON.parse(result.value) : [];
-    const cutoff = Date.now() - HISTORY_RETENTION_MS;
-    history = history.filter(e => e.ts >= cutoff);
-    history.push({ ...event, ts: Date.now() });
-    await window.storage.set('signup-history', JSON.stringify(history), true);
-  } catch (e) {
-    // History logging must never block the actual booking flow
-  }
+  // History is logged server-side by Apps Script — stub to prevent errors
 }
 
 async function refreshBookedTabs() {
@@ -742,24 +744,14 @@ function renderMyBookings(myBookings) {
       const ok = window.confirm(`Cancel your sign-up for ${slot}?`);
       if (!ok) return;
 
-      const dayBookings = await loadBookings(dayKey);
-      const myId = getMyId();
-      const entry = dayBookings[slot];
-      if (entry && entry.sessionId === myId) {
-        delete dayBookings[slot];
-        const saved = await saveBookings(dayKey, dayBookings);
-        if (saved) {
-          showToast('Your sign up has been cancelled.');
-          const day = DAYS.find(d => d.key === dayKey);
-          logHistoryEvent({ type: 'cancel', result: 'success', pseudo: entry.pseudo, playerId: entry.playerId, alliance: entry.alliance, day: day.label, slot });
-          if (dayKey === currentDay) {
-            selectedSlot = null;
-            await renderSlots();
-          }
-          await refreshBookedTabs();
-        } else {
-          showToast('Could not cancel. Please try again.');
-        }
+      const playerId = document.getElementById('playerId').value.trim();
+      const res = await apiPost({ action: 'cancel', day: dayKey, slot, playerId });
+      if (res.success) {
+        showToast('Your sign up has been cancelled.');
+        if (dayKey === currentDay) { selectedSlot = null; await renderSlots(); }
+        await refreshBookedTabs();
+      } else {
+        showToast('Could not cancel. Please try again.');
       }
     });
   });
@@ -828,8 +820,8 @@ async function renderSlots() {
   container.querySelectorAll('.slot').forEach(el => {
     el.addEventListener('click', async () => {
       const slot = el.dataset.slot;
-      const freshBookings = await loadBookings(currentDay);
-      const booking = freshBookings[slot];
+      bookings = await loadBookings(currentDay);
+      const booking = bookings[slot];
       const isMine = booking && booking.sessionId === getMyId();
 
       if (booking && !isMine) {
@@ -975,22 +967,19 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
   btn.textContent = 'Please wait...';
 
   try {
+    const day = DAYS.find(d => d.key === currentDay);
     bookings = await loadBookings(currentDay);
     const existing = bookings[selectedSlot];
-    const myId = getMyId();
-    const day = DAYS.find(d => d.key === currentDay);
 
-    if (existing && existing.sessionId === myId) {
-      delete bookings[selectedSlot];
-      const ok = await saveBookings(currentDay, bookings);
-      if (ok) {
+    // Own slot → cancel
+    if (existing && String(existing.playerId) === String(playerId)) {
+      const res = await apiPost({ action: 'cancel', day: currentDay, slot: selectedSlot, playerId });
+      if (res.success) {
         showToast('Your sign up has been cancelled.');
         statusEl.textContent = '';
-        logHistoryEvent({ type: 'cancel', result: 'success', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
       } else {
         statusEl.className = 'status err';
         statusEl.textContent = 'Your cancellation was not saved. Please try clicking again.';
-        logHistoryEvent({ type: 'cancel', result: 'failed_save', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
       }
       selectedSlot = null;
       await renderSlots();
@@ -998,34 +987,34 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
       return;
     }
 
+    // Slot taken by someone else
     if (existing) {
       statusEl.className = 'status err';
       statusEl.textContent = 'This slot was just taken by someone else. Please pick another one.';
-      logHistoryEvent({ type: 'confirm', result: 'failed_taken', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
       selectedSlot = null;
       await renderSlots();
       return;
     }
 
-    const alreadyBookedSlot = Object.entries(bookings).find(([s, b]) => b.sessionId === myId);
-    if (alreadyBookedSlot) {
-      statusEl.className = 'status err';
-      statusEl.textContent = 'You already have a slot this day (' + alreadyBookedSlot[0] + '). Cancel it first to pick another one.';
-      logHistoryEvent({ type: 'confirm', result: 'failed_already_booked', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
-      return;
-    }
+    // Book — server handles anti-multi-account check
+    const res = await apiPost({
+      action: 'book', day: currentDay, slot: selectedSlot,
+      pseudo, playerId, alliance, sessionId: getMyId()
+    });
 
-    bookings[selectedSlot] = { pseudo, playerId, alliance, sessionId: myId, ts: Date.now() };
-    const ok = await saveBookings(currentDay, bookings);
-    if (ok) {
+    if (res.success) {
       showToast(`Sign up confirmed for ${selectedSlot}. See you there, ${pseudo}!`);
       showConfirmationModal({ pseudo, alliance, dayLabel: day.label, buff: day.buff, slot: selectedSlot });
       statusEl.textContent = '';
-      logHistoryEvent({ type: 'confirm', result: 'success', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
+    } else if (res.error === 'slot_taken') {
+      statusEl.className = 'status err';
+      statusEl.textContent = 'This slot was just taken by someone else. Please pick another one.';
+    } else if (res.error === 'already_booked') {
+      statusEl.className = 'status err';
+      statusEl.textContent = `You already have a slot this day (${res.existingSlot}). Cancel it first.`;
     } else {
       statusEl.className = 'status err';
       statusEl.textContent = 'Your sign up was not saved. Please try clicking again.';
-      logHistoryEvent({ type: 'confirm', result: 'failed_save', pseudo, playerId, alliance, day: day.label, slot: selectedSlot });
     }
     selectedSlot = null;
     await renderSlots();
@@ -1046,8 +1035,8 @@ const DEFAULT_ADMIN_PASSWORD = 'icewatch2679';
 
 async function getAdminPassword() {
   try {
-    const result = await window.storage.get('admin-password', true);
-    return result ? result.value : DEFAULT_ADMIN_PASSWORD;
+    const data = await api({ action: 'getSetting', key: 'admin-password' });
+    return (data.success && data.value) ? data.value : DEFAULT_ADMIN_PASSWORD;
   } catch (e) {
     return DEFAULT_ADMIN_PASSWORD;
   }
@@ -1055,15 +1044,10 @@ async function getAdminPassword() {
 
 async function checkCurtain() {
   try {
-    const result = await window.storage.get('curtain-enabled', true);
-    // Curtain is ON by default. It only turns off once explicitly set to 'false'.
-    if (!result || result.value !== 'false') {
-      document.getElementById('publicCurtain').style.display = 'flex';
-    } else {
-      document.getElementById('publicCurtain').style.display = 'none';
-    }
+    const data = await api({ action: 'getSetting', key: 'curtain-enabled' });
+    const enabled = !data.success || data.value !== 'false';
+    document.getElementById('publicCurtain').style.display = enabled ? 'flex' : 'none';
   } catch (e) {
-    // Key doesn't exist yet, or storage error: default to curtain ON.
     document.getElementById('publicCurtain').style.display = 'flex';
   }
 }
@@ -1171,10 +1155,14 @@ document.getElementById('changePasswordBtn').addEventListener('click', async () 
     return;
   }
   try {
-    await window.storage.set('admin-password', newPw, true);
-    statusEl.className = 'status ok';
-    statusEl.textContent = 'Password updated.';
-    document.getElementById('newPasswordInput').value = '';
+    const result = await apiPost({ action: 'setSetting', key: 'admin-password', value: newPw });
+    if (result.success) {
+      statusEl.className = 'status ok';
+      statusEl.textContent = 'Password updated.';
+      document.getElementById('newPasswordInput').value = '';
+    } else {
+      throw new Error('failed');
+    }
   } catch (e) {
     statusEl.className = 'status err';
     statusEl.textContent = 'Something went wrong, please try again.';
@@ -1185,11 +1173,11 @@ document.getElementById('changePasswordBtn').addEventListener('click', async () 
 async function refreshCurtainButton() {
   const switchEl = document.getElementById('curtainSwitch');
   const badge = document.getElementById('curtainStatusBadge');
-  let enabled = true; // curtain is ON by default
+  let enabled = true;
   try {
-    const result = await window.storage.get('curtain-enabled', true);
-    enabled = !result || result.value !== 'false';
-  } catch (e) { /* key not set yet, stays ON by default */ }
+    const data = await api({ action: 'getSetting', key: 'curtain-enabled' });
+    enabled = !data.success || data.value !== 'false';
+  } catch (e) { /* stays ON by default */ }
   switchEl.classList.toggle('off', !enabled);
   switchEl.dataset.enabled = enabled ? 'true' : 'false';
   badge.textContent = enabled ? 'Currently ON, players cannot sign up' : 'Currently OFF, players can sign up';
@@ -1207,8 +1195,8 @@ document.getElementById('curtainSwitch').addEventListener('click', async () => {
 
   async function attemptSave(retriesLeft) {
     try {
-      const result = await window.storage.set('curtain-enabled', newState, true);
-      if (!result) throw new Error('Storage returned no result');
+      const result = await apiPost({ action: 'setSetting', key: 'curtain-enabled', value: newState });
+      if (!result.success) throw new Error('API error');
       return true;
     } catch (e) {
       if (retriesLeft > 0) {
@@ -1303,9 +1291,7 @@ async function renderAdminList() {
     btn.addEventListener('click', async () => {
       const slot = btn.dataset.slot;
       const storageKey = btn.dataset.storagekey;
-      const current = await loadBookings(storageKey);
-      delete current[slot];
-      await saveBookings(storageKey, current);
+      await apiPost({ action: 'deleteBooking', day: storageKey, slot });
       await renderAdminList();
     });
   });
@@ -1377,8 +1363,8 @@ async function renderHistory() {
 
   let history = [];
   try {
-    const result = await window.storage.get('signup-history', true);
-    history = result ? JSON.parse(result.value) : [];
+    const data = await api({ action: 'getHistory' });
+    if (data.success) history = data.history.map(e => ({ ...e, ts: e.timestamp }));
   } catch (e) { /* no history yet */ }
 
   const typeFilter = document.getElementById('historyFilterType').value;
@@ -1501,16 +1487,13 @@ document.getElementById('adminAddBtn').addEventListener('click', async () => {
   // 23:45 always belongs to the first (earlier) storage key, the rest belong to the main day
   const storageKey = (slot === '23:45') ? view.storageKeys[0] : view.storageKeys[view.storageKeys.length - 1];
 
-  const current = await loadBookings(storageKey);
-  if (current[slot]) {
+  const res = await apiPost({ action: 'addBookingAdmin', day: storageKey, slot, pseudo, playerId, alliance });
+  if (!res.success && res.error === 'slot_taken') {
     statusEl.className = 'status err';
     statusEl.textContent = 'This slot is already taken. Remove it first if you want to replace it.';
     return;
   }
-
-  current[slot] = { pseudo, playerId, alliance, sessionId: 'admin-' + Math.random().toString(36).slice(2, 8), ts: Date.now() };
-  const ok = await saveBookings(storageKey, current);
-  if (ok) {
+  if (res.success) {
     statusEl.className = 'status ok';
     statusEl.textContent = `Added ${pseudo} to ${slot}.`;
     document.getElementById('adminAddPseudo').value = '';
