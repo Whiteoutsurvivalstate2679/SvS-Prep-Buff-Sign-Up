@@ -933,30 +933,38 @@ document.getElementById('curtainSwitch').addEventListener('click', async () => {
   const switchEl = document.getElementById('curtainSwitch');
   if (switchEl.dataset.busy === 'true') return;
   switchEl.dataset.busy = 'true';
-  switchEl.style.opacity = '0.5'; switchEl.style.cursor = 'wait';
+  switchEl.style.opacity = '0.5';
+  switchEl.style.cursor = 'wait';
 
-  const newState = switchEl.dataset.enabled === 'true' ? 'false' : 'true';
+  const currentEnabled = switchEl.dataset.enabled === 'true';
+  const newState = currentEnabled ? 'false' : 'true';
 
-  async function attemptSave(left) {
+  let ok = false;
+  let lastError = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await apiPost({ action: 'setSetting', key: 'curtain-enabled', value: newState });
-      if (!r.success) throw new Error();
-      return true;
+      if (r && r.success) { ok = true; break; }
+      lastError = r ? JSON.stringify(r) : 'empty response';
     } catch (e) {
-      if (left > 0) { await new Promise(r => setTimeout(r, 400)); return attemptSave(left - 1); }
-      return false;
+      lastError = e.message || 'network error';
     }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 500));
   }
 
-  const ok = await attemptSave(2);
   if (ok) {
     document.getElementById('publicCurtain').style.display = newState === 'true' ? 'flex' : 'none';
     await refreshCurtainButton();
-    showToast(newState === 'true' ? 'Curtain enabled. Players will see a holding screen.' : 'Curtain disabled. Players can now sign up.');
+    showToast(newState === 'true'
+      ? 'Curtain enabled. Players will see a holding screen.'
+      : 'Curtain disabled. Players can now sign up.');
   } else {
-    showToast('Could not save. Please check your connection and try again.');
+    showToast('Could not save curtain state. Error: ' + lastError);
   }
-  switchEl.dataset.busy = 'false'; switchEl.style.opacity = '1'; switchEl.style.cursor = 'pointer';
+
+  switchEl.dataset.busy = 'false';
+  switchEl.style.opacity = '1';
+  switchEl.style.cursor = 'pointer';
 });
 
 function openAdmin(e) {
