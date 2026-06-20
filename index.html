@@ -401,12 +401,12 @@
         </div>
         <div class="admin-section">
           <p class="admin-section-label">Public access curtain</p>
-          <p class="admin-helptext">When enabled, players see a holding screen instead of the sign-up form.</p>
-          <p class="status" id="curtainStatus" style="margin-bottom:10px;"></p>
-          <div style="display:flex; gap:8px;">
-            <button class="confirm-btn" id="curtainOffBtn" style="flex:1;">&#x2705; Disable curtain</button>
-            <button class="confirm-btn cancel-mode" id="curtainOnBtn" style="flex:1;">&#x1F512; Enable curtain</button>
+          <p class="admin-helptext">Click the link for the action you want. It opens in a new tab — close it and come back. The curtain state is saved in the Sheet.</p>
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <a id="curtainOffLink" href="#" target="_blank" class="confirm-btn" style="flex:1;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">&#x2705; Disable curtain</a>
+            <a id="curtainOnLink" href="#" target="_blank" class="confirm-btn cancel-mode" style="flex:1;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">&#x1F512; Enable curtain</a>
           </div>
+          <p class="admin-helptext" style="margin:0;">After clicking, reload this page to see the updated state.</p>
         </div>
       </div>
     </div>
@@ -782,53 +782,53 @@ function showConfirmationModal({ pseudo, alliance, dayLabel, buff, slot }) {
 // ============================================================
 // AUTOCOMPLETE
 // ============================================================
-const pseudoInput     = document.getElementById('pseudo');
-const suggestionsBox  = document.getElementById('pseudoSuggestions');
+function pseudoInput()    { return document.getElementById('pseudo'); }
+function suggestionsBox() { return document.getElementById('pseudoSuggestions'); }
 
-function hideSuggestions() { suggestionsBox.style.display = 'none'; suggestionsBox.innerHTML = ''; }
+function hideSuggestions() { suggestionsBox().style.display = 'none'; suggestionsBox().innerHTML = ''; }
 
 document.getElementById('alliance').addEventListener('change', e => {
   document.getElementById('otherField').classList.toggle('visible', e.target.value === 'OTHER');
-  pseudoInput.value = ''; document.getElementById('playerId').value = ''; hideSuggestions();
+  pseudoInput().value = ''; document.getElementById('playerId').value = ''; hideSuggestions();
 });
 
-pseudoInput.addEventListener('input', () => {
+pseudoInput().addEventListener('input', () => {
   const allianceVal = document.getElementById('alliance').value;
   const list  = PLAYER_DB[allianceVal] || [];
-  const query = pseudoInput.value.trim().toLowerCase();
+  const query = pseudoInput().value.trim().toLowerCase();
   document.getElementById('playerId').value = '';
   if (!query || list.length === 0) { hideSuggestions(); return; }
   const matches = list.filter(([name]) => name.toLowerCase().includes(query)).slice(0, 8);
   if (matches.length === 0) { hideSuggestions(); return; }
-  suggestionsBox.innerHTML = matches.map(([name, id]) => `
+  suggestionsBox().innerHTML = matches.map(([name, id]) => `
     <div class="suggestion-item" data-name="${name}" data-id="${id}"
       style="padding:8px 12px;font-size:13px;cursor:pointer;color:var(--ws-ice);border-bottom:0.5px solid var(--ws-frost-border);">
       ${name} <span style="color:var(--ws-ice-faint);font-size:11px;">${id}</span></div>`).join('');
-  suggestionsBox.style.display = 'block';
-  suggestionsBox.querySelectorAll('.suggestion-item').forEach(item => {
+  suggestionsBox().style.display = 'block';
+  suggestionsBox().querySelectorAll('.suggestion-item').forEach(item => {
     item.addEventListener('mouseenter', () => item.style.background = 'var(--ws-bg-input)');
     item.addEventListener('mouseleave', () => item.style.background = 'transparent');
     item.addEventListener('click', () => {
-      pseudoInput.value = item.dataset.name;
+      pseudoInput().value = item.dataset.name;
       document.getElementById('playerId').value = item.dataset.id;
       hideSuggestions();
     });
   });
 });
 document.addEventListener('click', e => {
-  if (!suggestionsBox.contains(e.target) && e.target !== pseudoInput) hideSuggestions();
+  if (!suggestionsBox().contains(e.target) && e.target !== pseudoInput()) hideSuggestions();
 });
 
 let identityRefreshTimer = null;
 function scheduleIdentityRefresh() {
   clearTimeout(identityRefreshTimer);
   identityRefreshTimer = setTimeout(async () => {
-    const pseudo   = pseudoInput.value.trim();
+    const pseudo   = pseudoInput().value.trim();
     const playerId = document.getElementById('playerId').value.trim();
     if (pseudo && playerId) await refreshBookedTabs();
   }, 600);
 }
-pseudoInput.addEventListener('input', scheduleIdentityRefresh);
+pseudoInput().addEventListener('input', scheduleIdentityRefresh);
 document.getElementById('playerId').addEventListener('input', scheduleIdentityRefresh);
 
 // ============================================================
@@ -842,7 +842,7 @@ document.getElementById('confirmBtn').addEventListener('click', async () => {
   const btn = document.getElementById('confirmBtn');
   if (btn.disabled) return;
   const statusEl   = document.getElementById('status');
-  const pseudo     = pseudoInput.value.trim();
+  const pseudo     = pseudoInput().value.trim();
   const playerId   = document.getElementById('playerId').value.trim();
   const allianceSel = document.getElementById('alliance').value;
   const otherAll   = document.getElementById('otherAlliance').value.trim();
@@ -918,40 +918,14 @@ async function checkCurtain() {
 
 async function refreshCurtainButton() {}
 
-async function setCurtain(value) {
-  const statusEl = document.getElementById('curtainStatus');
-  statusEl.className = 'status';
-  statusEl.textContent = 'Saving...';
-
-  const url = API_URL + '?action=setSetting&key=curtain-enabled&value=' + value;
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = url;
-  document.body.appendChild(iframe);
-
-  let saved = false;
-  for (let i = 0; i < 5; i++) {
-    await new Promise(r => setTimeout(r, 1500));
-    try {
-      const check = await api({ action: 'getSetting', key: 'curtain-enabled' });
-      if (String(check.value) === String(value)) { saved = true; break; }
-    } catch(e) {}
-  }
-  try { document.body.removeChild(iframe); } catch(e) {}
-
-  document.getElementById('publicCurtain').style.display = value === 'true' ? 'flex' : 'none';
-  statusEl.className = 'status ok';
-  if (saved) {
-    statusEl.textContent = value === 'true' ? 'Curtain ON — players see holding screen.' : 'Curtain OFF — players can sign up.';
-    showToast(value === 'true' ? 'Curtain enabled.' : 'Curtain disabled. Players can now sign up.');
-  } else {
-    statusEl.textContent = (value === 'true' ? 'Curtain ON.' : 'Curtain OFF.') + ' Please verify in the SETTINGS tab of the Sheet.';
-    showToast(value === 'true' ? 'Curtain enabled.' : 'Curtain disabled.');
-  }
+function initCurtainLinks() {
+  const offUrl = API_URL + '?action=setSetting&key=curtain-enabled&value=false';
+  const onUrl  = API_URL + '?action=setSetting&key=curtain-enabled&value=true';
+  const offLink = document.getElementById('curtainOffLink');
+  const onLink  = document.getElementById('curtainOnLink');
+  if (offLink) offLink.href = offUrl;
+  if (onLink)  onLink.href  = onUrl;
 }
-
-document.getElementById('curtainOffBtn').addEventListener('click', () => setCurtain('false'));
-document.getElementById('curtainOnBtn').addEventListener('click',  () => setCurtain('true'));
 
 function openAdmin(e) {
   e.preventDefault();
@@ -976,6 +950,7 @@ document.getElementById('adminLoginBtn').addEventListener('click', async () => {
   document.getElementById('adminListView').style.display = 'block';
   setupAdminDaySelect(); setupAdminSlotSelect(); renderMessageBlocks();
   await refreshCurtainButton(); await renderAdminList();
+  initCurtainLinks();
 });
 
 document.querySelectorAll('.admin-tab-btn').forEach(btn => {
