@@ -401,11 +401,12 @@
         </div>
         <div class="admin-section">
           <p class="admin-section-label">Public access curtain</p>
-          <div class="toggle-switch-row" style="margin-bottom:10px;">
-            <span class="curtain-status-badge" id="curtainStatusBadge">Loading...</span>
-            <div class="toggle-switch" id="curtainSwitch"><div class="knob"></div></div>
+          <p class="admin-helptext">When enabled, players see a holding screen instead of the sign-up form.</p>
+          <p class="status" id="curtainStatus" style="margin-bottom:10px;"></p>
+          <div style="display:flex; gap:8px;">
+            <button class="confirm-btn" id="curtainOffBtn" style="flex:1;">&#x2705; Disable curtain</button>
+            <button class="confirm-btn cancel-mode" id="curtainOnBtn" style="flex:1;">&#x1F512; Enable curtain</button>
           </div>
-          <p class="admin-helptext" style="margin-bottom:0;">When enabled, players see a holding screen instead of the sign-up form.</p>
         </div>
       </div>
     </div>
@@ -476,7 +477,7 @@ drawSnow();
 // ============================================================
 // API
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxjiCFf0BgVIveukvqKf9HgdC-JWqRLHvtHHek4cUkznm-S3gVEfiQQS0NBZbUZXpPv/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxyUsbL8DPWLkvMFnaIiBmpn4W_Tg6ZQnwy4ely7zYjP0yOvvi2mq2OCNN1CVr7ljbO/exec';
 
 async function api(params = {}) {
   const url = API_URL + '?' + new URLSearchParams(params).toString();
@@ -914,58 +915,33 @@ async function checkCurtain() {
   }
 }
 
-async function refreshCurtainButton() {
-  const switchEl = document.getElementById('curtainSwitch');
-  const badge    = document.getElementById('curtainStatusBadge');
-  let enabled = true;
-  try {
-    const data = await api({ action: 'getSetting', key: 'curtain-enabled' });
-    enabled = !data.success || data.value === null || data.value === 'null' || data.value === 'true';
-  } catch (e) { /* stays ON */ }
+async function refreshCurtainButton() {}
 
-  switchEl.classList.toggle('off', !enabled);
-  switchEl.dataset.enabled = enabled ? 'true' : 'false'; // ← FIX : persist so click handler reads correct state
-  badge.textContent = enabled ? 'Currently ON, players cannot sign up' : 'Currently OFF, players can sign up';
-  badge.className   = 'curtain-status-badge ' + (enabled ? 'on' : 'off');
+async function setCurtain(value) {
+  const statusEl = document.getElementById('curtainStatus');
+  statusEl.className = 'status';
+  statusEl.textContent = 'Saving...';
+  try {
+    const url = API_URL + '?action=setSetting&key=curtain-enabled&value=' + value;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('publicCurtain').style.display = value === 'true' ? 'flex' : 'none';
+      statusEl.className = 'status ok';
+      statusEl.textContent = value === 'true' ? 'Curtain ON.' : 'Curtain OFF — players can sign up.';
+      showToast(value === 'true' ? 'Curtain enabled.' : 'Curtain disabled. Players can now sign up.');
+    } else {
+      statusEl.className = 'status err';
+      statusEl.textContent = 'Error: ' + JSON.stringify(data);
+    }
+  } catch (e) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Network error: ' + e.message;
+  }
 }
 
-document.getElementById('curtainSwitch').addEventListener('click', async () => {
-  const switchEl = document.getElementById('curtainSwitch');
-  if (switchEl.dataset.busy === 'true') return;
-  switchEl.dataset.busy = 'true';
-  switchEl.style.opacity = '0.5';
-  switchEl.style.cursor = 'wait';
-
-  const currentEnabled = switchEl.dataset.enabled === 'true';
-  const newState = currentEnabled ? 'false' : 'true';
-
-  let ok = false;
-  let lastError = '';
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const r = await apiPost({ action: 'setSetting', key: 'curtain-enabled', value: newState });
-      if (r && r.success) { ok = true; break; }
-      lastError = r ? JSON.stringify(r) : 'empty response';
-    } catch (e) {
-      lastError = e.message || 'network error';
-    }
-    if (attempt < 2) await new Promise(r => setTimeout(r, 500));
-  }
-
-  if (ok) {
-    document.getElementById('publicCurtain').style.display = newState === 'true' ? 'flex' : 'none';
-    await refreshCurtainButton();
-    showToast(newState === 'true'
-      ? 'Curtain enabled. Players will see a holding screen.'
-      : 'Curtain disabled. Players can now sign up.');
-  } else {
-    showToast('Could not save curtain state. Error: ' + lastError);
-  }
-
-  switchEl.dataset.busy = 'false';
-  switchEl.style.opacity = '1';
-  switchEl.style.cursor = 'pointer';
-});
+document.getElementById('curtainOffBtn').addEventListener('click', () => setCurtain('false'));
+document.getElementById('curtainOnBtn').addEventListener('click',  () => setCurtain('true'));
 
 function openAdmin(e) {
   e.preventDefault();
