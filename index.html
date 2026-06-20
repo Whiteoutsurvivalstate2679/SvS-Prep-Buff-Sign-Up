@@ -657,27 +657,22 @@ function renderDayTabs() {
 }
 
 // ── API CONFIG ──────────────────────────────────────────────
-// Replace this URL with your Google Apps Script Web App URL.
-const API_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxPewjTU-AsTpdklSF4NIA9n48LKxXxffqzp1owShabvxmeDLtPApJhuYkA4Oatm1xSow/exec';
 
-async function api(params) {
+async function api(params = {}) {
   const url = API_URL + '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+  const res = await fetch(url, { method: 'GET' });
+  return await res.json();
 }
 
-async function apiPost(body) {
+async function apiPost(data = {}) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify(data)
   });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+  return await res.json();
 }
-
-const _bCache = {};
 
 async function loadBookings(dayKey) {
   try {
@@ -687,10 +682,12 @@ async function loadBookings(dayKey) {
   } catch (e) { return _bCache[dayKey] || {}; }
 }
 
-async function saveBookings(dayKey, data) {
-  // Writes now go through book/cancel API actions — this stub prevents errors
+async function saveBookings(dayKey, d) {
+  // Writes go through book/cancel API actions — stub to prevent errors
   return true;
 }
+
+const _bCache = {};
 
 function getMyId() {
   const pseudo = (document.getElementById('pseudo').value || '').trim().toLowerCase();
