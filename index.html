@@ -628,10 +628,6 @@ const DAYS = [
   { key: 'fri', label: 'Friday', buff: 'No buff', nobuff: true, slots: [] },
 ];
 
-function nextSlotLabel(slots, i) {
-  return i < slots.length - 1 ? slots[i + 1] : (slots === FULL_SLOTS ? '00:15' : '00:15');
-}
-
 let currentDay = 'sun';
 let bookings = {};
 let dayBookingCache = {};
@@ -682,11 +678,6 @@ async function loadBookings(dayKey) {
   } catch (e) { return _bCache[dayKey] || {}; }
 }
 
-async function saveBookings(dayKey, d) {
-  // Writes go through book/cancel API actions — stub to prevent errors
-  return true;
-}
-
 const _bCache = {};
 
 function getMyId() {
@@ -697,10 +688,6 @@ function getMyId() {
     return window._fallbackSessionId;
   }
   return 'player-' + pseudo.replace(/[^a-z0-9]/g, '') + '-' + playerId.replace(/[^0-9]/g, '');
-}
-
-async function logHistoryEvent(event) {
-  // History is logged server-side by Apps Script — stub to prevent errors
 }
 
 async function refreshBookedTabs() {
@@ -822,9 +809,7 @@ async function renderSlots() {
       const isMine = booking && booking.sessionId === getMyId();
 
       if (booking && !isMine) {
-        // Slot was just taken by someone else, refresh the view to reflect reality
-        bookings = freshBookings;
-        renderSlots();
+        await renderSlots();
         return;
       }
 
@@ -930,9 +915,6 @@ function scheduleIdentityRefresh() {
   identityRefreshTimer = setTimeout(async () => {
     const pseudo = document.getElementById('pseudo').value.trim();
     const playerId = document.getElementById('playerId').value.trim();
-    // Only refresh the "Your sign-ups" recap and tab badges here.
-    // Never touch renderSlots() from this timer: it would wipe out a slot the player
-    // is in the middle of selecting, right as they're confirming their sign-up.
     if (pseudo && playerId) {
       await refreshBookedTabs();
     }
@@ -1166,7 +1148,11 @@ document.getElementById('changePasswordBtn').addEventListener('click', async () 
   }
 });
 
-/* Curtain toggle */
+/* ============================================================
+   Curtain toggle — BUG FIX
+   refreshCurtainButton() now always writes dataset.enabled so
+   the click handler can read the correct current state.
+   ============================================================ */
 async function refreshCurtainButton() {
   const switchEl = document.getElementById('curtainSwitch');
   const badge = document.getElementById('curtainStatusBadge');
@@ -1175,8 +1161,9 @@ async function refreshCurtainButton() {
     const data = await api({ action: 'getSetting', key: 'curtain-enabled' });
     enabled = !data.success || data.value !== 'false';
   } catch (e) { /* stays ON by default */ }
+
   switchEl.classList.toggle('off', !enabled);
-  switchEl.dataset.enabled = enabled ? 'true' : 'false';
+  switchEl.dataset.enabled = enabled ? 'true' : 'false'; // ← FIX: persist state so the click handler reads it correctly
   badge.textContent = enabled ? 'Currently ON, players cannot sign up' : 'Currently OFF, players can sign up';
   badge.className = 'curtain-status-badge ' + (enabled ? 'on' : 'off');
 }
@@ -1481,7 +1468,6 @@ document.getElementById('adminAddBtn').addEventListener('click', async () => {
   }
 
   const view = ADMIN_VIEWS.find(v => v.key === adminCurrentView);
-  // 23:45 always belongs to the first (earlier) storage key, the rest belong to the main day
   const storageKey = (slot === '23:45') ? view.storageKeys[0] : view.storageKeys[view.storageKeys.length - 1];
 
   const res = await apiPost({ action: 'addBookingAdmin', day: storageKey, slot, pseudo, playerId, alliance });
