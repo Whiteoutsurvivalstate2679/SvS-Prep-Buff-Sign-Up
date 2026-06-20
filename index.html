@@ -442,7 +442,8 @@
     <div style="width:56px;height:56px;border-radius:14px;background:rgba(20,40,68,0.9);border:0.5px solid var(--ws-gold-dim);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:26px;">🔒</div>
     <p style="font-size:11px;color:var(--ws-gold-dim);letter-spacing:3px;text-transform:uppercase;margin:0 0 10px;font-weight:600;">State 2679</p>
     <p style="font-family:var(--font-display);font-size:22px;color:var(--ws-ice);margin:0 0 14px;">Sign-Up Coming Soon</p>
-    <p style="font-size:13px;color:var(--ws-ice-dim);line-height:1.65;margin:0;">The SvS Prep Buff schedule will open shortly.<br>Please await further announcements.</p>
+    <p style="font-size:13px;color:var(--ws-ice-dim);line-height:1.65;margin:0 0 18px;">The SvS Prep Buff schedule will open shortly.<br>Please await further announcements.</p>
+    <p style="font-size:9px;color:rgba(191,227,255,0.25);margin:0;letter-spacing:0.3px;">Copyright © 2026 Player Goldee - 415 298 538 · Head of Apogée Société. All rights reserved.</p>
   </div>
 </div>
 
@@ -922,32 +923,30 @@ async function setCurtain(value) {
   statusEl.className = 'status';
   statusEl.textContent = 'Saving...';
 
-  // Ouvre l URL dans une iframe cachee — contourne le CORS
   const url = API_URL + '?action=setSetting&key=curtain-enabled&value=' + value;
   const iframe = document.createElement('iframe');
   iframe.style.display = 'none';
   iframe.src = url;
   document.body.appendChild(iframe);
 
-  // Attendre 2s que Apps Script traite la requete, puis verifier
-  await new Promise(r => setTimeout(r, 2000));
-  document.body.removeChild(iframe);
+  let saved = false;
+  for (let i = 0; i < 5; i++) {
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      const check = await api({ action: 'getSetting', key: 'curtain-enabled' });
+      if (String(check.value) === String(value)) { saved = true; break; }
+    } catch(e) {}
+  }
+  try { document.body.removeChild(iframe); } catch(e) {}
 
-  try {
-    const check = await api({ action: 'getSetting', key: 'curtain-enabled' });
-    const saved = check.value === value || (value === 'false' && check.value === 'false') || (value === 'true' && check.value === 'true');
-    if (saved) {
-      document.getElementById('publicCurtain').style.display = value === 'true' ? 'flex' : 'none';
-      statusEl.className = 'status ok';
-      statusEl.textContent = value === 'true' ? 'Curtain ON — players see holding screen.' : 'Curtain OFF — players can sign up.';
-      showToast(value === 'true' ? 'Curtain enabled.' : 'Curtain disabled. Players can now sign up.');
-    } else {
-      statusEl.className = 'status err';
-      statusEl.textContent = 'Not saved yet, try again. Current value: ' + check.value;
-    }
-  } catch(e) {
-    statusEl.className = 'status err';
-    statusEl.textContent = 'Could not verify: ' + e.message;
+  document.getElementById('publicCurtain').style.display = value === 'true' ? 'flex' : 'none';
+  statusEl.className = 'status ok';
+  if (saved) {
+    statusEl.textContent = value === 'true' ? 'Curtain ON — players see holding screen.' : 'Curtain OFF — players can sign up.';
+    showToast(value === 'true' ? 'Curtain enabled.' : 'Curtain disabled. Players can now sign up.');
+  } else {
+    statusEl.textContent = (value === 'true' ? 'Curtain ON.' : 'Curtain OFF.') + ' Please verify in the SETTINGS tab of the Sheet.';
+    showToast(value === 'true' ? 'Curtain enabled.' : 'Curtain disabled.');
   }
 }
 
