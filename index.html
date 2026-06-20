@@ -485,10 +485,10 @@ async function api(params = {}) {
   return await res.json();
 }
 async function apiPost(data = {}) {
-  const res = await fetch(API_URL, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
+  // Utilise GET au lieu de POST pour eviter les problemes CORS avec Apps Script
+  const params = new URLSearchParams(data);
+  const url = API_URL + '?' + params.toString();
+  const res = await fetch(url, { method: 'GET' });
   return await res.json();
 }
 
@@ -921,22 +921,33 @@ async function setCurtain(value) {
   const statusEl = document.getElementById('curtainStatus');
   statusEl.className = 'status';
   statusEl.textContent = 'Saving...';
+
+  // Ouvre l URL dans une iframe cachee — contourne le CORS
+  const url = API_URL + '?action=setSetting&key=curtain-enabled&value=' + value;
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+
+  // Attendre 2s que Apps Script traite la requete, puis verifier
+  await new Promise(r => setTimeout(r, 2000));
+  document.body.removeChild(iframe);
+
   try {
-    const url = API_URL + '?action=setSetting&key=curtain-enabled&value=' + value;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.success) {
+    const check = await api({ action: 'getSetting', key: 'curtain-enabled' });
+    const saved = check.value === value || (value === 'false' && check.value === 'false') || (value === 'true' && check.value === 'true');
+    if (saved) {
       document.getElementById('publicCurtain').style.display = value === 'true' ? 'flex' : 'none';
       statusEl.className = 'status ok';
-      statusEl.textContent = value === 'true' ? 'Curtain ON.' : 'Curtain OFF — players can sign up.';
+      statusEl.textContent = value === 'true' ? 'Curtain ON — players see holding screen.' : 'Curtain OFF — players can sign up.';
       showToast(value === 'true' ? 'Curtain enabled.' : 'Curtain disabled. Players can now sign up.');
     } else {
       statusEl.className = 'status err';
-      statusEl.textContent = 'Error: ' + JSON.stringify(data);
+      statusEl.textContent = 'Not saved yet, try again. Current value: ' + check.value;
     }
-  } catch (e) {
+  } catch(e) {
     statusEl.className = 'status err';
-    statusEl.textContent = 'Network error: ' + e.message;
+    statusEl.textContent = 'Could not verify: ' + e.message;
   }
 }
 
